@@ -191,6 +191,11 @@
     return `<span class="tag" title="${execs.map(e => ruleName(e.rule_id)).join(', ')}">${label}</span>`;
   }
 
+  function ruleMatchedText(eventId) {
+    const execs = _executionsByEvent[eventId] || [];
+    return execs.length ? execs.map(e => ruleName(e.rule_id)).join(', ') : 'None';
+  }
+
   // Worst case among an event's rule executions — what actually needs the
   // user's attention, independent of whether content parsing/matching ran ok.
   const RULE_STATUS_RANK = { error: 0, processing: 1, pending: 2, success: 3, none: 4 };
@@ -207,19 +212,25 @@
     return status === 'none' ? '<span class="tag off">none</span>' : statusTag(status);
   }
 
+  const CENTERED = { cellStyle: { textAlign: 'center' } };
+
   const eventColumns = [
     { colId: 'actions', headerName: '', width: 140, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
     { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
     { field: 'external_id', headerName: 'External id', width: 200 },
-    { field: 'status', headerName: 'Content Received', width: 150, cellRenderer: cellEventStatus },
-    { colId: 'rule', headerName: 'Rule matched', width: 140, cellRenderer: cellEventRule, sortable: false, filter: false },
+    { field: 'status', headerName: 'Content Received', width: 150, cellRenderer: cellEventStatus, cellDataType: 'text', ...CENTERED },
+    { field: 'attempts', headerName: 'Content Attempts', width: 130, ...CENTERED },
+    {
+      colId: 'rule', headerName: 'Rule matched', width: 160, cellRenderer: cellEventRule,
+      valueGetter: p => p.data ? ruleMatchedText(p.data.id) : '',
+      cellDataType: 'text', sortable: true, filter: true, floatingFilter: true, ...CENTERED,
+    },
     {
       colId: 'ruleStatus', headerName: 'Rule Status', width: 130, cellRenderer: cellRuleStatus,
       valueGetter: p => p.data ? worstRuleStatus(p.data.id) : '',
       comparator: (a, b) => RULE_STATUS_RANK[a] - RULE_STATUS_RANK[b],
-      sortable: true, filter: false,
+      cellDataType: 'text', sortable: true, filter: true, floatingFilter: true, ...CENTERED,
     },
-    { field: 'attempts', headerName: 'Attempts', width: 100 },
     { field: 'received_at', headerName: 'Received at', width: 170, cellDataType: 'text' },
     { field: 'updated_at', headerName: 'Updated at', width: 170, cellDataType: 'text' },
   ];
@@ -234,10 +245,10 @@
     { field: 'executed_at', headerName: 'Executed at', width: 170, cellDataType: 'text' },
     {
       field: 'success', headerName: 'Result', width: 100, cellRenderer: cellPollingSuccess,
-      cellDataType: 'text', filterValueGetter: p => p.data.success ? 'ok' : 'failed',
+      cellDataType: 'text', filterValueGetter: p => p.data.success ? 'ok' : 'failed', ...CENTERED,
     },
-    { field: 'new_events_found', headerName: 'New events', width: 110 },
-    { field: 'duration_ms', headerName: 'Duration (ms)', width: 120 },
+    { field: 'new_events_found', headerName: 'New events', width: 110, ...CENTERED },
+    { field: 'duration_ms', headerName: 'Duration (ms)', width: 120, ...CENTERED },
     { field: 'error_detail', headerName: 'Error', flex: 1, minWidth: 200 },
   ];
 

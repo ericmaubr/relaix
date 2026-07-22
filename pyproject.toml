@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "relaix"
-version = "0.1.6"
+version = "0.1.7"
 description = "Generic webhook polling and rule-based dispatch service — pulls events from a buffer provider (e.g. webhook.site), matches them against user-defined rules, and forwards matches to a destination URL."
 readme = "README.md"
 license = { text = "MIT" }
