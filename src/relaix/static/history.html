@@ -59,7 +59,7 @@
   #details-panel { margin: 12px 20px 0; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); padding: 14px 16px; }
   #details-panel h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #23324a; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #eaecf0; display: flex; justify-content: space-between; align-items: center; }
   #details-panel h2 button { font-size: 11px; font-weight: 600; padding: 4px 10px; border: 1px solid #d8dee6; background: #fff; border-radius: 4px; cursor: pointer; }
-  #details-panel pre { background: #f5f6f8; border-radius: 6px; padding: 10px; font-size: 12px; overflow-x: auto; max-height: 260px; }
+  #details-panel pre { background: #f5f6f8; border-radius: 6px; padding: 10px; font-size: 12px; overflow: auto; max-height: 120px; margin-top: 12px; }
   #details-panel table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
   #details-panel th { text-align: left; color: #666; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #eaecf0; }
   #details-panel td { padding: 6px 8px; border-bottom: 1px solid #f0f2f5; }
@@ -326,11 +326,11 @@
       panel.innerHTML = `
         <h2>Event ${event.id} <button onclick="document.getElementById('details-panel').classList.add('hidden')">Close</button></h2>
         <p><strong>Source:</strong> ${sourceName(event.source_id)} &nbsp; <strong>Status:</strong> ${statusTag(event.status, event.updated_at)} &nbsp; <strong>Attempts:</strong> ${event.attempts}</p>
-        <pre>${JSON.stringify(event.raw_payload, null, 2)}</pre>
         <table>
           <thead><tr><th>Rule</th><th>Status</th><th>Attempts</th><th>HTTP</th><th>Response</th><th></th></tr></thead>
           <tbody>${executionsRows || '<tr><td colspan="6">No rule matched this event.</td></tr>'}</tbody>
-        </table>`;
+        </table>
+        <pre>${JSON.stringify(event.raw_payload, null, 2)}</pre>`;
       panel.classList.remove('hidden');
     } catch (err) {
       showAlert('error', err.message);
