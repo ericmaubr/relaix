@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "relaix"
+version = "0.1.0"
+description = "Generic webhook polling and rule-based dispatch service — pulls events from a buffer provider (e.g. webhook.site), matches them against user-defined rules, and forwards matches to a destination URL."
+readme = "README.md"
+license = { text = "MIT" }
+requires-python = ">=3.10"
+authors = [{ name = "Eric Mauricio", email = "ericmaubr@gmail.com" }]
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn[standard]>=0.29",
+    "sqlalchemy>=2.0",
+    "alembic>=1.13",
+    "psycopg[binary]>=3.1",
+    "requests>=2.31",
+]
+
+[project.urls]
+Homepage = "https://github.com/ericmaubr/relaix"
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0",
+    "httpx>=0.27",
+    "ruff>=0.4",
+    "black>=24.0",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+# Alembic migration scripts packaged alongside the code — lets `python -m
+# relaix migrate` work off a plain `pip install`, no repo checkout needed
+# (see src/relaix/migrations.py).
+relaix = [
+    "alembic/env.py",
+    "alembic/script.py.mako",
+    "alembic/versions/*.py",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = ["src/relaix/alembic/versions"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP"]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
