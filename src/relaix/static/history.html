@@ -167,9 +167,9 @@
 
   function cellEventActions(params) {
     if (!params.data) return '';
-    let html = `<button type="button" class="btn-icon" onclick="viewEvent('${params.data.id}')">View</button>`;
+    let html = `<button type="button" class="btn-icon" onclick="viewEvent('${params.data.id}')" title="View">👁</button>`;
     if (params.data.status === 'processing') {
-      html += `<button type="button" class="btn-icon reset" onclick="resetEvent('${params.data.id}')">Reset</button>`;
+      html += `<button type="button" class="btn-icon reset" onclick="resetEvent('${params.data.id}')" title="Reset">↺</button>`;
     }
     return html;
   }
@@ -216,7 +216,7 @@
   const CENTERED = { cellStyle: { textAlign: 'center' }, headerClass: 'center-header' };
 
   const eventColumns = [
-    { colId: 'actions', headerName: '', width: 140, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
+    { colId: 'actions', headerName: '', width: 75, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
     { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
     { field: 'external_id', headerName: 'External id', width: 100 },
     { field: 'status', headerName: 'Content Received', width: 150, cellRenderer: cellEventStatus, cellDataType: 'text', ...CENTERED },
@@ -379,10 +379,10 @@
           <td>${x.attempts}</td>
           <td>${x.response_http_status || ''}</td>
           <td>${(x.response_detail || '').slice(0, 200)}</td>
-          <td>${x.status === 'processing' ? `<button type="button" class="btn-icon reset" onclick="resetExecution('${x.id}', '${event.id}')">Reset</button>` : ''}</td>
+          <td>${x.status === 'processing' ? `<button type="button" class="btn-icon reset" onclick="resetExecution('${x.id}', '${event.id}')" title="Reset">↺</button>` : ''}</td>
         </tr>`).join('');
       panel.innerHTML = `
-        <h2>Event ${event.id} <button onclick="document.getElementById('details-panel').classList.add('hidden')">Close</button></h2>
+        <h2>Event ${event.id} <button class="btn-icon" onclick="document.getElementById('details-panel').classList.add('hidden')" title="Close">✕</button></h2>
         <p><strong>Source:</strong> ${sourceName(event.source_id)} &nbsp; <strong>Status:</strong> ${statusTag(event.status, event.updated_at)} &nbsp; <strong>Attempts:</strong> ${event.attempts}</p>
         <table>
           <thead><tr><th>Rule</th><th>Status</th><th>Attempts</th><th>HTTP</th><th>Response</th><th></th></tr></thead>
