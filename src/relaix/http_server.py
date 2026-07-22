@@ -8,7 +8,7 @@ from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from relaix import api
 
@@ -56,6 +56,7 @@ class SourceRequest(BaseModel):
     api_token: str | None = None
     channel_id: str | None = None
     polling_interval_seconds: int = 300
+    max_content_attempts: int = Field(3, ge=1, le=99)
 
 
 class SourceUpdateRequest(BaseModel):
@@ -64,6 +65,7 @@ class SourceUpdateRequest(BaseModel):
     api_token: str | None = None
     channel_id: str | None = None
     polling_interval_seconds: int | None = None
+    max_content_attempts: int | None = Field(None, ge=1, le=99)
     active: bool | None = None
 
 

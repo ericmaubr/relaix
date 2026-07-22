@@ -57,6 +57,7 @@ def _row_to_source(row) -> WebhookSource:
         api_token=m["api_token"],
         channel_id=m["channel_id"],
         polling_interval_seconds=m["polling_interval_seconds"],
+        max_content_attempts=m["max_content_attempts"],
         last_processed_cursor=m["last_processed_cursor"],
         active=bool(m["active"]),
         created_at=m["created_at"] or "",
@@ -144,6 +145,7 @@ class SourceRepository:
         api_token: str | None = None,
         channel_id: str | None = None,
         polling_interval_seconds: int = 300,
+        max_content_attempts: int = 3,
     ) -> WebhookSource:
         now = _now()
         values = dict(
@@ -154,6 +156,7 @@ class SourceRepository:
             api_token=api_token,
             channel_id=channel_id,
             polling_interval_seconds=polling_interval_seconds,
+            max_content_attempts=max_content_attempts,
             last_processed_cursor=None,
             active=True,
             created_at=now,

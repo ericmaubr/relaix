@@ -84,6 +84,23 @@ def test_evaluate_pending_events_marks_invalid_json_as_error():
     assert EventRepository().get(event.id).status == "error"
 
 
+def test_evaluate_pending_events_stops_retrying_malformed_content_at_source_cap():
+    source = SourceRepository().create(
+        name="Source", api_url="https://example.com", max_content_attempts=2
+    )
+    event = EventRepository().create(source.id, "ext-1", "not json")
+
+    evaluate_pending_events()  # attempt 1 -> error
+    assert EventRepository().get(event.id).attempts == 1
+
+    evaluate_pending_events()  # attempt 2 -> error, now at the cap
+    assert EventRepository().get(event.id).attempts == 2
+
+    result = evaluate_pending_events()  # capped — must not attempt a 3rd time
+    assert result == {"events_processed": 0, "rules_matched": 0}
+    assert EventRepository().get(event.id).attempts == 2
+
+
 def test_evaluate_pending_events_is_idempotent_for_already_matched_event():
     source = _make_source()
     rule = _make_rule(

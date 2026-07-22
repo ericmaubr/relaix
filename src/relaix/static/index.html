@@ -121,6 +121,9 @@
         <label><span>Polling interval (seconds)</span>
           <input type="number" id="f-interval" min="10" value="300" required>
         </label>
+        <label><span>Max content attempts</span>
+          <input type="number" id="f-max-content-attempts" min="1" max="99" value="3" required>
+        </label>
       </div>
       <div class="row" style="margin-top: 10px;">
         <label><span>API base URL</span><input type="text" id="f-api-url" placeholder="https://webhook.site" required></label>
@@ -176,6 +179,7 @@
     { field: 'api_url', headerName: 'API base URL', flex: 1, minWidth: 200 },
     { field: 'channel_id', headerName: 'Channel / token id', width: 180 },
     { field: 'polling_interval_seconds', headerName: 'Interval (s)', width: 120 },
+    { field: 'max_content_attempts', headerName: 'Max attempts', width: 120 },
     { field: 'last_processed_cursor', headerName: 'Last cursor', width: 180 },
     { field: 'active', headerName: 'Status', width: 110, cellRenderer: cellActive, valueGetter: p => p.data ? (p.data.active ? 'active' : 'inactive') : '' },
   ];
@@ -272,6 +276,7 @@
     document.getElementById('source-form').reset();
     document.getElementById('f-id').value = '';
     document.getElementById('f-interval').value = 300;
+    document.getElementById('f-max-content-attempts').value = 3;
     document.getElementById('form-panel').classList.remove('hidden');
     document.getElementById('f-name').focus();
     showAlert('', '');
@@ -286,6 +291,7 @@
     document.getElementById('f-name').value = s.name;
     document.getElementById('f-kind').value = s.kind;
     document.getElementById('f-interval').value = s.polling_interval_seconds;
+    document.getElementById('f-max-content-attempts').value = s.max_content_attempts;
     document.getElementById('f-api-url').value = s.api_url;
     document.getElementById('f-api-token').value = s.api_token || '';
     document.getElementById('f-channel-id').value = s.channel_id || '';
@@ -309,6 +315,7 @@
       api_token: document.getElementById('f-api-token').value || null,
       channel_id: document.getElementById('f-channel-id').value || null,
       polling_interval_seconds: parseInt(document.getElementById('f-interval').value, 10),
+      max_content_attempts: parseInt(document.getElementById('f-max-content-attempts').value, 10),
     };
     const btn = document.getElementById('btn-submit');
     btn.disabled = true;

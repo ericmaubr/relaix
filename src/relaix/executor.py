@@ -15,40 +15,60 @@ import json
 import requests
 
 from relaix.matching import rule_matches
-from relaix.repository import EventRepository, RuleExecutionRepository, RuleRepository
+from relaix.repository import (
+    EventRepository,
+    RuleExecutionRepository,
+    RuleRepository,
+    SourceRepository,
+)
 
 
 def evaluate_pending_events(batch_size: int = 50) -> dict:
     events = EventRepository()
     rules_repo = RuleRepository()
     executions = RuleExecutionRepository()
+    sources = SourceRepository()
 
     processed = 0
     matched = 0
 
-    for status in ("pending", "error"):
-        for event in events.list(status=status, limit=batch_size):
-            if not events.claim(event.id):
-                continue  # another worker already claimed it
-            processed += 1
+    # Snapshot both statuses upfront — querying "error" after already having
+    # processed "pending" in this same call would re-pick up an event that
+    # just flipped to "error" moments ago, double-counting one attempt.
+    candidates = events.list(status="pending", limit=batch_size) + events.list(
+        status="error", limit=batch_size
+    )
 
-            try:
-                payload = json.loads(event.raw_payload)
-            except ValueError:
-                events.finish(event.id, "error", event.attempts + 1)
+    for event in candidates:
+        if event.status == "error":
+            # malformed content never fixes itself — unlike a dispatch
+            # failure, retrying forever just burns cycles, so this is
+            # capped per-source (source.max_content_attempts).
+            source = sources.get(event.source_id)
+            max_attempts = source.max_content_attempts if source else 3
+            if event.attempts >= max_attempts:
                 continue
+        if not events.claim(event.id):
+            continue  # another worker already claimed it
+        processed += 1
 
-            for rule in rules_repo.list(event.source_id):
-                if not rule.active:
-                    continue
-                conditions = rules_repo.list_conditions(rule.id)
-                if not rule_matches(payload, conditions):
-                    continue
-                if not executions.list(event_id=event.id, rule_id=rule.id):
-                    executions.create(event.id, rule.id)
-                matched += 1
+        try:
+            payload = json.loads(event.raw_payload)
+        except ValueError:
+            events.finish(event.id, "error", event.attempts + 1)
+            continue
 
-            events.finish(event.id, "done", event.attempts + 1)
+        for rule in rules_repo.list(event.source_id):
+            if not rule.active:
+                continue
+            conditions = rules_repo.list_conditions(rule.id)
+            if not rule_matches(payload, conditions):
+                continue
+            if not executions.list(event_id=event.id, rule_id=rule.id):
+                executions.create(event.id, rule.id)
+            matched += 1
+
+        events.finish(event.id, "done", event.attempts + 1)
 
     return {"events_processed": processed, "rules_matched": matched}
 

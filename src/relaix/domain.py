@@ -18,6 +18,7 @@ class WebhookSource:
     api_token: str | None
     channel_id: str | None
     polling_interval_seconds: int
+    max_content_attempts: int
     last_processed_cursor: str | None
     active: bool
     created_at: str

@@ -42,6 +42,10 @@ webhook_source = Table(
     Column("api_token", String),
     Column("channel_id", String),
     Column("polling_interval_seconds", Integer, nullable=False, server_default="300"),
+    # Caps automatic retry of events whose content can't be parsed as JSON —
+    # unlike a transient dispatch failure, malformed content never fixes
+    # itself, so retrying forever just burns cycles (see evaluate_pending_events).
+    Column("max_content_attempts", Integer, nullable=False, server_default="3"),
     Column("last_processed_cursor", String),
     Column("active", Boolean, nullable=False, server_default="1"),
     Column("created_at", String),

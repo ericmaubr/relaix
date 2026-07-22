@@ -191,12 +191,34 @@
     return `<span class="tag" title="${execs.map(e => ruleName(e.rule_id)).join(', ')}">${label}</span>`;
   }
 
+  // Worst case among an event's rule executions — what actually needs the
+  // user's attention, independent of whether content parsing/matching ran ok.
+  const RULE_STATUS_RANK = { error: 0, processing: 1, pending: 2, success: 3, none: 4 };
+
+  function worstRuleStatus(eventId) {
+    const execs = _executionsByEvent[eventId] || [];
+    if (!execs.length) return 'none';
+    return execs.map(e => e.status).sort((a, b) => RULE_STATUS_RANK[a] - RULE_STATUS_RANK[b])[0];
+  }
+
+  function cellRuleStatus(params) {
+    if (!params.data) return '';
+    const status = worstRuleStatus(params.data.id);
+    return status === 'none' ? '<span class="tag off">none</span>' : statusTag(status);
+  }
+
   const eventColumns = [
     { colId: 'actions', headerName: '', width: 140, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
     { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
     { field: 'external_id', headerName: 'External id', width: 200 },
-    { field: 'status', headerName: 'Status', width: 140, cellRenderer: cellEventStatus },
+    { field: 'status', headerName: 'Content Received', width: 150, cellRenderer: cellEventStatus },
     { colId: 'rule', headerName: 'Rule matched', width: 140, cellRenderer: cellEventRule, sortable: false, filter: false },
+    {
+      colId: 'ruleStatus', headerName: 'Rule Status', width: 130, cellRenderer: cellRuleStatus,
+      valueGetter: p => p.data ? worstRuleStatus(p.data.id) : '',
+      comparator: (a, b) => RULE_STATUS_RANK[a] - RULE_STATUS_RANK[b],
+      sortable: true, filter: false,
+    },
     { field: 'attempts', headerName: 'Attempts', width: 100 },
     { field: 'received_at', headerName: 'Received at', width: 170 },
     { field: 'updated_at', headerName: 'Updated at', width: 170 },
