@@ -297,8 +297,9 @@ class RuleRepository:
 
 
 class EventRepository:
-    """Read/write access to the inbox — writes are exercised by the Collector
-    (not implemented yet, see README "Implementation order")."""
+    """The inbox — one row per raw event pulled from a source. Writes are
+    exercised by the Collector; `claim`/`finish` are exercised by the
+    Executor (see collector.py / executor.py)."""
 
     def __init__(self, engine: Engine | None = None) -> None:
         self._engine = engine or get_engine()
@@ -331,14 +332,42 @@ class EventRepository:
         return _row_to_event(row) if row else None
 
     def list(
-        self, source_id: str | None = None, limit: int = 100
+        self,
+        source_id: str | None = None,
+        status: str | None = None,
+        limit: int = 100,
     ) -> list[WebhookEvent]:
         query = select(t_event).order_by(t_event.c.received_at.desc()).limit(limit)
         if source_id is not None:
             query = query.where(t_event.c.source_id == source_id)
+        if status is not None:
+            query = query.where(t_event.c.status == status)
         with self._engine.connect() as conn:
             rows = conn.execute(query).fetchall()
         return [_row_to_event(r) for r in rows]
+
+    def claim(self, event_id: str) -> bool:
+        """Atomically moves an event from pending/error to processing.
+        Returns False if another worker already claimed it (or it doesn't
+        exist / isn't claimable) — see plan §2.4 for why this is a
+        conditional UPDATE instead of a distributed lock."""
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                update(t_event)
+                .where(
+                    t_event.c.id == event_id, t_event.c.status.in_(["pending", "error"])
+                )
+                .values(status="processing")
+            )
+        return result.rowcount > 0
+
+    def finish(self, event_id: str, status: str, attempts: int) -> None:
+        with self._engine.begin() as conn:
+            conn.execute(
+                update(t_event)
+                .where(t_event.c.id == event_id)
+                .values(status=status, attempts=attempts, updated_at=_now())
+            )
 
 
 class PollingLogRepository:
@@ -388,20 +417,90 @@ class PollingLogRepository:
 
 
 class RuleExecutionRepository:
-    """Read access to the outbox — writes are exercised by the Executor (not
-    implemented yet, see README "Implementation order")."""
+    """The outbox — one row per (event x rule that matched it). Writes are
+    exercised by the Executor (see executor.py)."""
 
     def __init__(self, engine: Engine | None = None) -> None:
         self._engine = engine or get_engine()
 
+    def create(self, event_id: str, rule_id: str) -> WebhookRuleExecution:
+        execution_id = _new_id()
+        with self._engine.begin() as conn:
+            conn.execute(
+                insert(t_rule_execution).values(
+                    id=execution_id,
+                    event_id=event_id,
+                    rule_id=rule_id,
+                    status="pending",
+                    attempts=0,
+                    updated_at=_now(),
+                )
+            )
+        return self.get(execution_id)
+
+    def get(self, execution_id: str) -> WebhookRuleExecution | None:
+        with self._engine.connect() as conn:
+            row = conn.execute(
+                select(t_rule_execution).where(t_rule_execution.c.id == execution_id)
+            ).fetchone()
+        return _row_to_rule_execution(row) if row else None
+
     def list(
-        self, event_id: str | None = None, rule_id: str | None = None
+        self,
+        event_id: str | None = None,
+        rule_id: str | None = None,
+        status: str | None = None,
+        limit: int | None = None,
     ) -> list[WebhookRuleExecution]:
-        query = select(t_rule_execution).order_by(t_rule_execution.c.executed_at.desc())
+        query = select(t_rule_execution).order_by(t_rule_execution.c.updated_at.desc())
         if event_id is not None:
             query = query.where(t_rule_execution.c.event_id == event_id)
         if rule_id is not None:
             query = query.where(t_rule_execution.c.rule_id == rule_id)
+        if status is not None:
+            query = query.where(t_rule_execution.c.status == status)
+        if limit is not None:
+            query = query.limit(limit)
         with self._engine.connect() as conn:
             rows = conn.execute(query).fetchall()
         return [_row_to_rule_execution(r) for r in rows]
+
+    def claim(self, execution_id: str) -> bool:
+        """Atomically moves an execution from pending/error to processing —
+        same claim pattern as `EventRepository.claim` (see plan §2.4)."""
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                update(t_rule_execution)
+                .where(
+                    t_rule_execution.c.id == execution_id,
+                    t_rule_execution.c.status.in_(["pending", "error"]),
+                )
+                .values(status="processing")
+            )
+        return result.rowcount > 0
+
+    def finish(
+        self,
+        execution_id: str,
+        status: str,
+        response_http_status: int | None = None,
+        response_detail: str | None = None,
+    ) -> None:
+        with self._engine.begin() as conn:
+            current = conn.execute(
+                select(t_rule_execution.c.attempts).where(
+                    t_rule_execution.c.id == execution_id
+                )
+            ).scalar_one()
+            conn.execute(
+                update(t_rule_execution)
+                .where(t_rule_execution.c.id == execution_id)
+                .values(
+                    status=status,
+                    attempts=current + 1,
+                    response_http_status=response_http_status,
+                    response_detail=response_detail,
+                    executed_at=_now(),
+                    updated_at=_now(),
+                )
+            )

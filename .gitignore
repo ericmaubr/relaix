@@ -13,3 +13,6 @@ dist/
 *.db-shm
 api.conf
 .env
+
+# private context — not for the public repo, see CLAUDE.md itself for why
+CLAUDE.md

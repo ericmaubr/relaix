@@ -10,6 +10,8 @@ _COMMANDS = (
     "serve",
     "provision-db",
     "migrate",
+    "collect",
+    "execute",
 )
 
 
@@ -38,6 +40,14 @@ def main() -> None:
         from relaix.cli.migrate import main_migrate
 
         sys.exit(main_migrate(rest))
+    elif command == "collect":
+        from relaix.cli.collect import main_collect
+
+        sys.exit(main_collect(rest))
+    elif command == "execute":
+        from relaix.cli.execute import main_execute
+
+        sys.exit(main_execute(rest))
     else:
         print(f"Unknown command: {command}")
         print(f"Available commands: {', '.join(_COMMANDS)}")
@@ -66,6 +76,15 @@ def _usage() -> None:
         "                 upgrade head) — uses the packaged scripts, no repo checkout"
     )
     print("                 needed. Run after every deploy/update.")
+    print()
+    print("  collect        Polls active sources for new events (Collector)")
+    print("                   [--once]             run one cycle and exit")
+    print("                   [--interval SECONDS] sleep between cycles (default: 60)")
+    print()
+    print("  execute        Matches events against rules and dispatches actions")
+    print("                 (Executor)")
+    print("                   [--once]             run one cycle and exit")
+    print("                   [--interval SECONDS] sleep between cycles (default: 30)")
     print()
     print("Database flags (commands that access data):")
     print("  --db-url URL   SQLAlchemy connection string — takes precedence over")

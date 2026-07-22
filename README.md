@@ -48,7 +48,9 @@ See [`src/relaix/db.py`](src/relaix/db.py) for the full schema.
 | `>`, `>=`, `<`, `<=` | comparison — tries numeric comparison first, falls back to string comparison (works for ISO 8601 dates by construction) |
 
 Conditions in the same `group_index` are combined with AND. OR-across-groups
-is modeled in the schema but not evaluated yet (see "Out of scope" below).
+is modeled in the schema but not evaluated yet (see "Out of scope" below) —
+today all conditions on a rule are ANDed together regardless of group. A
+rule with zero conditions never matches (no accidental catch-all).
 
 ## Architecture notes
 
@@ -70,18 +72,18 @@ is modeled in the schema but not evaluated yet (see "Out of scope" below).
 ## Status
 
 Schema, HTTP API (sources/rules CRUD, read-only events/executions/polling
-log), CLI (`serve`, `migrate`, `provision-db`) are in place. The Collector
-(polling job) and Executor (rule evaluation + dispatch job) are not
-implemented yet — see "Implementation order" below.
+log), CLI (`serve`, `migrate`, `provision-db`, `collect`, `execute`),
+Collector and Executor are all in place. No UI yet — see "Implementation
+order" below.
 
 ## Implementation order
 
 1. ~~Repo scaffold (FastAPI + SQLAlchemy Core + Alembic).~~
 2. ~~Full data model + initial migration.~~
-3. Collector: polling job for `webhook_site`-kind sources, writing
-   `webhook_event` and `webhook_polling_log`.
-4. Rule engine + Executor: condition evaluation, atomic claim,
-   `webhook_rule_execution`, action HTTP dispatch.
+3. ~~Collector: polling job for `webhook_site`-kind sources, writing
+   `webhook_event` and `webhook_polling_log`.~~
+4. ~~Rule engine + Executor: condition evaluation, atomic claim,
+   `webhook_rule_execution`, action HTTP dispatch.~~
 5. UI: Sources → Rules → History (AG Grid, same visual pattern used
    elsewhere — history depends on there being real data to show).
 6. Deploy as a background service (Collector + Executor loops + local UI —
@@ -93,7 +95,13 @@ implemented yet — see "Implementation order" below.
 pip install -e ".[dev]"
 python -m relaix migrate      # applies the schema (SQLite by default)
 python -m relaix serve        # starts the HTTP API on 127.0.0.1:8790
+python -m relaix collect      # Collector loop — polls active sources on their own interval
+python -m relaix execute      # Executor loop — matches events against rules, dispatches actions
 ```
+
+`collect` and `execute` run forever by default (sleeping `--interval`
+seconds between cycles); pass `--once` to run a single cycle and exit, for
+use from cron / Task Scheduler instead of a long-running process.
 
 Copy [`example-api.conf`](example-api.conf) to `api.conf` to configure host,
 port, bearer token and database URL instead of passing flags/env vars.
