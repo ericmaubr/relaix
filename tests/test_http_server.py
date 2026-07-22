@@ -4,6 +4,7 @@ import pytest
 from fastapi.testclient import TestClient
 
 from relaix.http_server import app, set_api_token
+from relaix.repository import EventRepository, RuleExecutionRepository, SourceRepository
 
 
 @pytest.fixture(autouse=True)
@@ -108,6 +109,63 @@ def test_rule_rejects_invalid_operator(client):
 def test_events_and_polling_log_endpoints_are_empty_by_default(client):
     assert client.get("/events").json() == []
     assert client.get("/polling-log").json() == []
+
+
+def test_events_status_filter(client):
+    source = SourceRepository().create(name="S", api_url="https://example.com")
+    pending = EventRepository().create(source.id, "ext-1", "{}")
+    EventRepository().create(source.id, "ext-2", "{}")
+    EventRepository().claim(pending.id)  # -> processing
+
+    resp = client.get("/events", params={"status": "processing"})
+    assert resp.status_code == 200
+    assert [e["id"] for e in resp.json()] == [pending.id]
+
+
+def test_reset_event(client):
+    source = SourceRepository().create(name="S", api_url="https://example.com")
+    event = EventRepository().create(source.id, "ext-1", "{}")
+
+    resp = client.post(f"/events/{event.id}/reset")
+    assert resp.status_code == 409  # not in processing yet
+
+    EventRepository().claim(event.id)
+    resp = client.post(f"/events/{event.id}/reset")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+
+
+def test_reset_rule_execution(client):
+    source = SourceRepository().create(name="S", api_url="https://example.com")
+    event = EventRepository().create(source.id, "ext-1", "{}")
+    rule = client.post(
+        "/rules",
+        json={
+            "name": "Rule",
+            "source_id": source.id,
+            "action_url": "https://internal/action",
+        },
+    ).json()
+    execution = RuleExecutionRepository().create(event.id, rule["id"])
+
+    resp = client.get("/rule-executions", params={"event_id": event.id})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 1
+
+    resp = client.post(f"/rule-executions/{execution.id}/reset")
+    assert resp.status_code == 409  # still pending, not processing
+
+    RuleExecutionRepository().claim(execution.id)
+    resp = client.post(f"/rule-executions/{execution.id}/reset")
+    assert resp.status_code == 200
+    assert resp.json()["status"] == "pending"
+
+
+def test_html_pages_are_served(client):
+    for path in ("/", "/rules-ui", "/history-ui"):
+        resp = client.get(path)
+        assert resp.status_code == 200
+        assert "text/html" in resp.headers["content-type"]
 
 
 def test_auth_required_when_token_configured(client):

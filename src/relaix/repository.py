@@ -369,6 +369,17 @@ class EventRepository:
                 .values(status=status, attempts=attempts, updated_at=_now())
             )
 
+    def reset(self, event_id: str) -> bool:
+        """Manual "reset to pending" for a row stuck in `processing` — the
+        UI action from plan §2.6, used instead of an automatic reaper."""
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                update(t_event)
+                .where(t_event.c.id == event_id, t_event.c.status == "processing")
+                .values(status="pending", updated_at=_now())
+            )
+        return result.rowcount > 0
+
 
 class PollingLogRepository:
     def __init__(self, engine: Engine | None = None) -> None:
@@ -504,3 +515,17 @@ class RuleExecutionRepository:
                     updated_at=_now(),
                 )
             )
+
+    def reset(self, execution_id: str) -> bool:
+        """Manual "reset to pending" for a row stuck in `processing` — the
+        UI action from plan §2.6, used instead of an automatic reaper."""
+        with self._engine.begin() as conn:
+            result = conn.execute(
+                update(t_rule_execution)
+                .where(
+                    t_rule_execution.c.id == execution_id,
+                    t_rule_execution.c.status == "processing",
+                )
+                .values(status="pending", updated_at=_now())
+            )
+        return result.rowcount > 0

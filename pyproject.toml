@@ -44,6 +44,7 @@ relaix = [
     "alembic/env.py",
     "alembic/script.py.mako",
     "alembic/versions/*.py",
+    "static/*.html",
 ]
 
 [tool.ruff]

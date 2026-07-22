@@ -4,11 +4,15 @@ from __future__ import annotations
 
 import json
 import os
+from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 
 from relaix import api
+
+_STATIC_DIR = Path(__file__).parent / "static"
 
 app = FastAPI(
     title="relaix",
@@ -83,6 +87,21 @@ def get_version():
     from relaix.version import get_version as pkg_version
 
     return {"version": pkg_version()}
+
+
+@app.get("/", response_class=HTMLResponse, include_in_schema=False)
+def index_ui():
+    return HTMLResponse((_STATIC_DIR / "index.html").read_text(encoding="utf-8"))
+
+
+@app.get("/rules-ui", response_class=HTMLResponse, include_in_schema=False)
+def rules_ui():
+    return HTMLResponse((_STATIC_DIR / "rules.html").read_text(encoding="utf-8"))
+
+
+@app.get("/history-ui", response_class=HTMLResponse, include_in_schema=False)
+def history_ui():
+    return HTMLResponse((_STATIC_DIR / "history.html").read_text(encoding="utf-8"))
 
 
 # ── sources ──────────────────────────────────────────────────────────────
@@ -187,12 +206,14 @@ def delete_rule(rule_id: str):
     return Response(status_code=204)
 
 
-# ── events / polling log / rule executions (read-only) ─────────────────
+# ── events / polling log / rule executions ──────────────────────────────
 
 
 @app.get("/events", dependencies=[Depends(verify_token)])
-def get_events(source_id: str | None = None, limit: int = 100):
-    events = api.list_events(source_id, limit)
+def get_events(
+    source_id: str | None = None, status: str | None = None, limit: int = 100
+):
+    events = api.list_events(source_id=source_id, status=status, limit=limit)
     return [{**vars(e), "raw_payload": _try_parse_json(e.raw_payload)} for e in events]
 
 
@@ -207,6 +228,31 @@ def get_event(event_id: str):
         "raw_payload": _try_parse_json(event.raw_payload),
         "rule_executions": executions,
     }
+
+
+@app.post("/events/{event_id}/reset", dependencies=[Depends(verify_token)])
+def post_reset_event(event_id: str):
+    if not api.reset_event(event_id):
+        raise HTTPException(
+            status_code=409, detail="Event isn't in processing — nothing to reset"
+        )
+    return api.get_event(event_id)
+
+
+@app.get("/rule-executions", dependencies=[Depends(verify_token)])
+def get_rule_executions(
+    event_id: str | None = None, rule_id: str | None = None, status: str | None = None
+):
+    return api.list_rule_executions(event_id=event_id, rule_id=rule_id, status=status)
+
+
+@app.post("/rule-executions/{execution_id}/reset", dependencies=[Depends(verify_token)])
+def post_reset_rule_execution(execution_id: str):
+    if not api.reset_rule_execution(execution_id):
+        raise HTTPException(
+            status_code=409, detail="Execution isn't in processing — nothing to reset"
+        )
+    return {"id": execution_id, "status": "pending"}
 
 
 @app.get("/polling-log", dependencies=[Depends(verify_token)])

@@ -69,12 +69,25 @@ rule with zero conditions never matches (no accidental catch-all).
   and a manual "reset to pending" action, not corrected by a background
   timeout policy.
 
+## UI
+
+Three pages, served by `relaix` itself (`/`, `/rules-ui`, `/history-ui`):
+
+- **Sources** — CRUD for `webhook_source`.
+- **Rules** — CRUD for `webhook_rule` and its conditions, inline in the same
+  form.
+- **History** — `webhook_event` (with drill-down into the
+  `webhook_rule_execution` rows it produced) and `webhook_polling_log` in
+  separate tabs. Rows stuck in `processing` for more than 10 minutes get a
+  visual highlight and a "Reset" button.
+
 ## Status
 
-Schema, HTTP API (sources/rules CRUD, read-only events/executions/polling
-log), CLI (`serve`, `migrate`, `provision-db`, `collect`, `execute`),
-Collector and Executor are all in place. No UI yet — see "Implementation
-order" below.
+Schema, HTTP API (sources/rules CRUD, events/executions/polling log with a
+manual "reset to pending" action), CLI (`serve`, `migrate`, `provision-db`,
+`collect`, `execute`), Collector, Executor, and UI (Sources, Rules, History)
+are all in place. Only deployment as a background service is left — see
+"Implementation order" below.
 
 ## Implementation order
 
@@ -84,8 +97,8 @@ order" below.
    `webhook_event` and `webhook_polling_log`.~~
 4. ~~Rule engine + Executor: condition evaluation, atomic claim,
    `webhook_rule_execution`, action HTTP dispatch.~~
-5. UI: Sources → Rules → History (AG Grid, same visual pattern used
-   elsewhere — history depends on there being real data to show).
+5. ~~UI: Sources → Rules → History (AG Grid), with the manual "reset to
+   pending" action for rows stuck in `processing`.~~
 6. Deploy as a background service (Collector + Executor loops + local UI —
    no public inbound port needed).
 

@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>relaix — History</title>
+<script src="https://cdn.jsdelivr.net/npm/ag-grid-community/dist/ag-grid-community.min.js"></script>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; font-size: 13px; background: #f5f6f8; color: #1f2430; }
+
+  header { background: #23324a; color: #fff; padding: 11px 20px; display: flex; align-items: center; gap: 16px; position: relative; }
+  header h1 { font-size: 15px; margin: 0; font-weight: 600; white-space: nowrap; }
+  header .version { font-size: 11px; color: rgba(255,255,255,.35); margin-left: auto; }
+
+  .hamburger { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; background: transparent; border: none; cursor: pointer; border-radius: 5px; color: #fff; flex: none; }
+  .hamburger:hover { background: rgba(255,255,255,.12); }
+  .hamburger svg { width: 16px; height: 16px; }
+
+  #auth-panel {
+    display: none; position: absolute; top: 46px; left: 8px; z-index: 30;
+    background: #fff; color: #1f2430; border: 1px solid #d3d7de; border-radius: 8px;
+    min-width: 230px; box-shadow: 0 8px 24px rgba(0,0,0,.16); padding: 14px;
+  }
+  #auth-panel.open { display: block; }
+  #auth-panel .nav-links { display: flex; flex-direction: column; gap: 2px; margin-bottom: 12px; padding-bottom: 12px; border-bottom: 1px solid #eaecf0; }
+  #auth-panel .nav-links a { display: flex; align-items: center; gap: 9px; padding: 8px 8px; font-size: 13px; border-radius: 6px; text-decoration: none; color: #1f2430; }
+  #auth-panel .nav-links a:hover { background: #eef3f8; }
+  #auth-panel .nav-links a.current { color: #23324a; font-weight: 600; }
+  #auth-panel .nav-links a .dot { width: 6px; height: 6px; border-radius: 50%; background: #c2c7d0; flex: none; }
+  #auth-panel .nav-links a.current .dot { background: #23324a; }
+  #auth-panel .sb-title { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px; color: #888; margin-bottom: 8px; }
+  #auth-panel .sb-status { font-size: 11px; margin-top: 7px; color: #888; line-height: 1.4; }
+  #auth-panel .sb-btn-row { display: flex; gap: 6px; margin-top: 7px; }
+  #auth-panel .sb-btn { flex: 1; padding: 6px 0; border-radius: 5px; border: none; font-size: 12px; font-weight: 600; cursor: pointer; transition: background .15s; }
+  #auth-panel .sb-btn.primary { background: #23324a; color: #fff; }
+  #auth-panel .sb-btn.primary:hover { background: #324567; }
+  #auth-panel .sb-btn.secondary { background: #f0f2f5; color: #444; border: 1px solid #d0d5dd; }
+  #auth-panel .sb-btn.secondary:hover { background: #e4e8ef; }
+  #auth-panel input[type=password] { width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; font-family: monospace; background: #fff; }
+  #auth-panel input[type=password]:focus { outline: none; border-color: #23324a; box-shadow: 0 0 0 2px rgba(35,50,74,.12); }
+
+  .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: #fff; border-bottom: 1px solid #e2e5eb; flex-wrap: wrap; }
+  .toolbar input[type="text"] { padding: 6px 10px; border: 1px solid #d3d7de; border-radius: 4px; font-size: 13px; width: 260px; }
+  .toolbar button { padding: 6px 14px; border: 1px solid #23324a; background: #fff; color: #23324a; border-radius: 4px; font-size: 12px; font-weight: 600; cursor: pointer; white-space: nowrap; }
+  .toolbar button:hover { background: #eef3f8; }
+  .toolbar button.active-tab { background: #23324a; color: #fff; }
+  .toolbar button.active-tab:hover { background: #324567; }
+  .toolbar .status { font-size: 12px; color: #6b7280; margin-left: auto; }
+
+  .alert { margin: 12px 20px 0; border-radius: 6px; padding: 8px 12px; font-size: 12px; line-height: 1.4; }
+  .alert.ok { background: #e8f5e9; border-left: 4px solid #2e7d32; color: #1b5e20; }
+  .alert.error { background: #fdecea; border-left: 4px solid #c62828; color: #7f0000; }
+  .hidden { display: none !important; }
+
+  #grid-wrap { padding: 16px 20px; }
+  #grid { height: calc(100vh - 150px); width: 100%; --ag-font-size: 12.6px; }
+
+  #details-panel { margin: 12px 20px 0; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); padding: 14px 16px; }
+  #details-panel h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #23324a; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #eaecf0; display: flex; justify-content: space-between; align-items: center; }
+  #details-panel h2 button { font-size: 11px; font-weight: 600; padding: 4px 10px; border: 1px solid #d8dee6; background: #fff; border-radius: 4px; cursor: pointer; }
+  #details-panel pre { background: #f5f6f8; border-radius: 6px; padding: 10px; font-size: 12px; overflow-x: auto; max-height: 260px; }
+  #details-panel table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  #details-panel th { text-align: left; color: #666; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #eaecf0; }
+  #details-panel td { padding: 6px 8px; border-bottom: 1px solid #f0f2f5; }
+
+  .tag { display: inline-block; font-size: 11px; padding: 2px 7px; border-radius: 99px; background: #eef3f8; color: #23324a; white-space: nowrap; }
+  .tag.pending { background: #f0f2f5; color: #555; }
+  .tag.processing { background: #fff4e0; color: #8a5a00; }
+  .tag.processing.stale { background: #fdecea; color: #c62828; font-weight: 700; }
+  .tag.done, .tag.success { background: #e8f5e9; color: #1b5e20; }
+  .tag.error { background: #fdecea; color: #c62828; }
+  .btn-icon { border: 1px solid #d8dee6; background: #fff; border-radius: 3px; cursor: pointer; font-size: 12px; color: #555; padding: 2px 8px; line-height: 1.6; margin-right: 3px; }
+  .btn-icon:hover { background: #eaf0f7; border-color: #23324a; color: #23324a; }
+  .btn-icon.reset { border-color: #c62828; color: #c62828; }
+  .btn-icon.reset:hover { background: #fdecea; }
+</style>
+</head>
+<body>
+
+<header>
+  <button class="hamburger" id="btn-menu" aria-label="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+  </button>
+  <div id="auth-panel">
+    <div class="nav-links">
+      <a href="."><span class="dot"></span>Sources</a>
+      <a href="rules-ui"><span class="dot"></span>Rules</a>
+      <a href="history-ui" class="current"><span class="dot"></span>History</a>
+    </div>
+    <div class="sb-title">Authentication</div>
+    <input id="token-input" type="password" placeholder="Bearer token"
+           autocomplete="off" onkeydown="if(event.key==='Enter') saveToken()">
+    <div class="sb-btn-row">
+      <button class="sb-btn primary" onclick="saveToken()">Connect</button>
+      <button class="sb-btn secondary" onclick="clearToken()">Sign out</button>
+    </div>
+    <div class="sb-status" id="token-status"></div>
+  </div>
+  <h1>relaix — History</h1>
+  <span class="version" id="app-version"></span>
+</header>
+
+<div id="alert" class="alert hidden"></div>
+
+<div id="content" class="hidden">
+
+  <div class="toolbar">
+    <button id="tab-events" onclick="switchTab('events')">Events</button>
+    <button id="tab-polling" onclick="switchTab('polling')">Polling log</button>
+    <input type="text" id="quick-search" placeholder="Search any field...">
+    <button class="secondary" id="btn-refresh" onclick="refresh()">Refresh</button>
+    <span class="status" id="count-status"></span>
+  </div>
+
+  <div id="details-panel" class="hidden"></div>
+
+  <div id="grid-wrap">
+    <div id="grid" class="ag-theme-quartz"></div>
+  </div>
+
+</div>
+
+<script>
+  let TOKEN = localStorage.getItem('relaix_token') || '';
+  let gridApi;
+  let _sources = [];
+  let _rules = [];
+  let _events = [];
+  let _pollingLog = [];
+  let _tab = 'events';
+  const STALE_MINUTES = 10;
+
+  fetch('version').then(r => r.json()).then(d => {
+    document.getElementById('app-version').textContent = 'v' + d.version;
+  }).catch(() => {});
+
+  document.getElementById('btn-menu').addEventListener('click', (e) => {
+    e.stopPropagation();
+    document.getElementById('auth-panel').classList.toggle('open');
+  });
+  document.addEventListener('click', () => document.getElementById('auth-panel').classList.remove('open'));
+  document.getElementById('auth-panel').addEventListener('click', (e) => e.stopPropagation());
+
+  function sourceName(id) {
+    const s = _sources.find(s => s.id === id);
+    return s ? s.name : id;
+  }
+
+  function ruleName(id) {
+    const r = _rules.find(r => r.id === id);
+    return r ? r.name : id;
+  }
+
+  function isStale(updatedAt) {
+    if (!updatedAt) return false;
+    const then = new Date(updatedAt.replace(' ', 'T') + 'Z');
+    return (Date.now() - then.getTime()) > STALE_MINUTES * 60 * 1000;
+  }
+
+  function statusTag(status, updatedAt) {
+    const stale = status === 'processing' && isStale(updatedAt);
+    return `<span class="tag ${status}${stale ? ' stale' : ''}">${status}${stale ? ' (stuck?)' : ''}</span>`;
+  }
+
+  function cellEventActions(params) {
+    if (!params.data) return '';
+    let html = `<button type="button" class="btn-icon" onclick="viewEvent('${params.data.id}')">View</button>`;
+    if (params.data.status === 'processing') {
+      html += `<button type="button" class="btn-icon reset" onclick="resetEvent('${params.data.id}')">Reset</button>`;
+    }
+    return html;
+  }
+
+  function cellEventStatus(params) {
+    if (!params.data) return '';
+    return statusTag(params.data.status, params.data.updated_at);
+  }
+
+  const eventColumns = [
+    { colId: 'actions', headerName: '', width: 140, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
+    { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
+    { field: 'external_id', headerName: 'External id', width: 200 },
+    { field: 'status', headerName: 'Status', width: 140, cellRenderer: cellEventStatus },
+    { field: 'attempts', headerName: 'Attempts', width: 100 },
+    { field: 'received_at', headerName: 'Received at', width: 170 },
+    { field: 'updated_at', headerName: 'Updated at', width: 170 },
+  ];
+
+  function cellPollingSuccess(params) {
+    if (!params.data) return '';
+    return params.data.success ? '<span class="tag done">ok</span>' : '<span class="tag error">failed</span>';
+  }
+
+  const pollingColumns = [
+    { field: 'source_id', headerName: 'Source', width: 180, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
+    { field: 'executed_at', headerName: 'Executed at', width: 170 },
+    { field: 'success', headerName: 'Result', width: 100, cellRenderer: cellPollingSuccess },
+    { field: 'new_events_found', headerName: 'New events', width: 110 },
+    { field: 'duration_ms', headerName: 'Duration (ms)', width: 120 },
+    { field: 'error_detail', headerName: 'Error', flex: 1, minWidth: 200 },
+  ];
+
+  function applyFilterSort(cols) {
+    cols.forEach(c => {
+      if (!c.cellRenderer || c.field) { c.filter = true; c.sortable = true; c.floatingFilter = true; }
+    });
+    return cols;
+  }
+  applyFilterSort(eventColumns);
+  applyFilterSort(pollingColumns);
+
+  const gridOptions = {
+    columnDefs: eventColumns,
+    rowData: [],
+    defaultColDef: { resizable: true, sortable: true, filter: true },
+    animateRows: true,
+    enableCellTextSelection: true,
+    ensureDomOrder: true,
+    pagination: true,
+    paginationPageSize: 100,
+    onFilterChanged: () => updateCount(),
+    onGridReady: () => updateCount(),
+    onModelUpdated: () => updateCount(),
+  };
+
+  function updateCount() {
+    if (!gridApi) return;
+    const total = _tab === 'events' ? _events.length : _pollingLog.length;
+    const shown = gridApi.getDisplayedRowCount();
+    const label = _tab === 'events' ? 'event(s)' : 'polling cycle(s)';
+    document.getElementById('count-status').textContent =
+      shown === total ? `${total} ${label}` : `${shown} of ${total} ${label}`;
+  }
+
+  function switchTab(tab) {
+    _tab = tab;
+    document.getElementById('tab-events').classList.toggle('active-tab', tab === 'events');
+    document.getElementById('tab-polling').classList.toggle('active-tab', tab === 'polling');
+    document.getElementById('details-panel').classList.add('hidden');
+    if (tab === 'events') {
+      gridApi.setGridOption('columnDefs', eventColumns);
+      gridApi.setGridOption('rowData', _events);
+    } else {
+      gridApi.setGridOption('columnDefs', pollingColumns);
+      gridApi.setGridOption('rowData', _pollingLog);
+    }
+    updateCount();
+  }
+
+  function saveToken() {
+    const v = document.getElementById('token-input').value.trim();
+    if (!v) return;
+    TOKEN = v;
+    localStorage.setItem('relaix_token', v);
+    document.getElementById('auth-panel').classList.remove('open');
+    load();
+  }
+
+  function clearToken() {
+    TOKEN = '';
+    localStorage.removeItem('relaix_token');
+    document.getElementById('content').classList.add('hidden');
+    document.getElementById('token-status').textContent = '';
+    document.getElementById('token-input').value = '';
+    showAlert('', '');
+  }
+
+  async function api(method, path, body) {
+    const r = await fetch(path, {
+      method,
+      headers: {
+        'Authorization': 'Bearer ' + TOKEN,
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+      },
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (r.status === 204) return null;
+    const data = await r.json().catch(() => ({ detail: r.statusText }));
+    if (!r.ok) throw new Error(data.detail || r.statusText);
+    return data;
+  }
+
+  async function load() {
+    const st = document.getElementById('token-status');
+    st.style.color = '#888'; st.textContent = 'Loading...';
+    try {
+      await refresh();
+      document.getElementById('content').classList.remove('hidden');
+      st.style.color = '#2e7d32';
+      st.textContent = '✓ connected';
+      if (!gridApi) {
+        gridApi = agGrid.createGrid(document.getElementById('grid'), gridOptions);
+        document.getElementById('quick-search').addEventListener('input', (e) => {
+          gridApi.setGridOption('quickFilterText', e.target.value);
+          updateCount();
+        });
+      }
+      switchTab('events');
+    } catch (e) {
+      st.style.color = '#c62828';
+      st.textContent = '✗ ' + e.message;
+    }
+  }
+
+  async function refresh() {
+    [_sources, _rules, _events, _pollingLog] = await Promise.all([
+      api('GET', 'sources'), api('GET', 'rules'), api('GET', 'events'), api('GET', 'polling-log'),
+    ]);
+    if (gridApi) switchTab(_tab);
+  }
+
+  async function viewEvent(id) {
+    try {
+      const event = await api('GET', 'events/' + id);
+      const panel = document.getElementById('details-panel');
+      const executionsRows = event.rule_executions.map(x => `
+        <tr>
+          <td>${ruleName(x.rule_id)}</td>
+          <td>${statusTag(x.status, x.updated_at)}</td>
+          <td>${x.attempts}</td>
+          <td>${x.response_http_status || ''}</td>
+          <td>${(x.response_detail || '').slice(0, 200)}</td>
+          <td>${x.status === 'processing' ? `<button type="button" class="btn-icon reset" onclick="resetExecution('${x.id}', '${event.id}')">Reset</button>` : ''}</td>
+        </tr>`).join('');
+      panel.innerHTML = `
+        <h2>Event ${event.id} <button onclick="document.getElementById('details-panel').classList.add('hidden')">Close</button></h2>
+        <p><strong>Source:</strong> ${sourceName(event.source_id)} &nbsp; <strong>Status:</strong> ${statusTag(event.status, event.updated_at)} &nbsp; <strong>Attempts:</strong> ${event.attempts}</p>
+        <pre>${JSON.stringify(event.raw_payload, null, 2)}</pre>
+        <table>
+          <thead><tr><th>Rule</th><th>Status</th><th>Attempts</th><th>HTTP</th><th>Response</th><th></th></tr></thead>
+          <tbody>${executionsRows || '<tr><td colspan="6">No rule matched this event.</td></tr>'}</tbody>
+        </table>`;
+      panel.classList.remove('hidden');
+    } catch (err) {
+      showAlert('error', err.message);
+    }
+  }
+
+  async function resetEvent(id) {
+    try {
+      await api('POST', 'events/' + id + '/reset');
+      await refresh();
+    } catch (err) {
+      showAlert('error', err.message);
+    }
+  }
+
+  async function resetExecution(id, eventId) {
+    try {
+      await api('POST', 'rule-executions/' + id + '/reset');
+      await refresh();
+      await viewEvent(eventId);
+    } catch (err) {
+      showAlert('error', err.message);
+    }
+  }
+
+  function showAlert(kind, msg) {
+    const el = document.getElementById('alert');
+    if (!kind || !msg) { el.classList.add('hidden'); return; }
+    el.className = 'alert ' + kind;
+    el.textContent = msg;
+    el.classList.remove('hidden');
+    if (kind === 'ok') setTimeout(() => el.classList.add('hidden'), 4000);
+  }
+
+  if (TOKEN) {
+    document.getElementById('token-input').value = TOKEN;
+    load();
+  }
+</script>
+
+</body>
+</html>

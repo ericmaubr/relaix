@@ -102,21 +102,38 @@ def delete_rule(rule_id: str) -> bool:
     return RuleRepository().delete(rule_id)
 
 
-# ── events / polling log / rule executions (read-only for now — writes are
-# owned by the Collector/Executor jobs, not yet implemented) ──────────────
+# ── events / polling log / rule executions — reads for the UI, plus the
+# manual "reset to pending" action for rows stuck in processing (plan §2.6).
+# All other writes are owned by the Collector/Executor jobs.────────────────
 
 
-def list_events(source_id: str | None = None, limit: int = 100):
-    return EventRepository().list(source_id, limit)
+def list_events(
+    source_id: str | None = None, status: str | None = None, limit: int = 100
+):
+    return EventRepository().list(source_id=source_id, status=status, limit=limit)
 
 
 def get_event(event_id: str):
     return EventRepository().get(event_id)
 
 
+def reset_event(event_id: str) -> bool:
+    return EventRepository().reset(event_id)
+
+
 def list_polling_log(source_id: str | None = None, limit: int = 100):
     return PollingLogRepository().list(source_id, limit)
 
 
-def list_rule_executions(event_id: str | None = None, rule_id: str | None = None):
-    return RuleExecutionRepository().list(event_id, rule_id)
+def list_rule_executions(
+    event_id: str | None = None,
+    rule_id: str | None = None,
+    status: str | None = None,
+):
+    return RuleExecutionRepository().list(
+        event_id=event_id, rule_id=rule_id, status=status
+    )
+
+
+def reset_rule_execution(execution_id: str) -> bool:
+    return RuleExecutionRepository().reset(execution_id)
