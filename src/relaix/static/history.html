@@ -220,8 +220,8 @@
       sortable: true, filter: false,
     },
     { field: 'attempts', headerName: 'Attempts', width: 100 },
-    { field: 'received_at', headerName: 'Received at', width: 170 },
-    { field: 'updated_at', headerName: 'Updated at', width: 170 },
+    { field: 'received_at', headerName: 'Received at', width: 170, cellDataType: 'text' },
+    { field: 'updated_at', headerName: 'Updated at', width: 170, cellDataType: 'text' },
   ];
 
   function cellPollingSuccess(params) {
@@ -231,8 +231,11 @@
 
   const pollingColumns = [
     { field: 'source_id', headerName: 'Source', width: 180, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
-    { field: 'executed_at', headerName: 'Executed at', width: 170 },
-    { field: 'success', headerName: 'Result', width: 100, cellRenderer: cellPollingSuccess },
+    { field: 'executed_at', headerName: 'Executed at', width: 170, cellDataType: 'text' },
+    {
+      field: 'success', headerName: 'Result', width: 100, cellRenderer: cellPollingSuccess,
+      cellDataType: 'text', filterValueGetter: p => p.data.success ? 'ok' : 'failed',
+    },
     { field: 'new_events_found', headerName: 'New events', width: 110 },
     { field: 'duration_ms', headerName: 'Duration (ms)', width: 120 },
     { field: 'error_detail', headerName: 'Error', flex: 1, minWidth: 200 },
