@@ -227,7 +227,7 @@
       cellDataType: 'text', sortable: true, filter: true, floatingFilter: true, ...CENTERED,
     },
     {
-      colId: 'ruleStatus', headerName: 'Rule Status', width: 130, cellRenderer: cellRuleStatus,
+      colId: 'ruleStatus', headerName: 'Rule Status', width: 124, cellRenderer: cellRuleStatus,
       valueGetter: p => p.data ? worstRuleStatus(p.data.id) : '',
       comparator: (a, b) => RULE_STATUS_RANK[a] - RULE_STATUS_RANK[b],
       cellDataType: 'text', sortable: true, filter: true, floatingFilter: true, ...CENTERED,
