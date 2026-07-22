@@ -86,21 +86,8 @@ Three pages, served by `relaix` itself (`/`, `/rules-ui`, `/history-ui`):
 Schema, HTTP API (sources/rules CRUD, events/executions/polling log with a
 manual "reset to pending" action), CLI (`serve`, `migrate`, `provision-db`,
 `collect`, `execute`), Collector, Executor, and UI (Sources, Rules, History)
-are all in place. Only deployment as a background service is left — see
-"Implementation order" below.
-
-## Implementation order
-
-1. ~~Repo scaffold (FastAPI + SQLAlchemy Core + Alembic).~~
-2. ~~Full data model + initial migration.~~
-3. ~~Collector: polling job for `webhook_site`-kind sources, writing
-   `webhook_event` and `webhook_polling_log`.~~
-4. ~~Rule engine + Executor: condition evaluation, atomic claim,
-   `webhook_rule_execution`, action HTTP dispatch.~~
-5. ~~UI: Sources → Rules → History (AG Grid), with the manual "reset to
-   pending" action for rows stuck in `processing`.~~
-6. Deploy as a background service (Collector + Executor loops + local UI —
-   no public inbound port needed).
+are all in place. Deployment as a background service is up to how you run
+Python services in your own environment (systemd, NSSM, a process manager).
 
 ## Running locally
 
