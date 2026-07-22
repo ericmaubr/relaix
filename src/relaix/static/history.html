@@ -55,6 +55,7 @@
 
   #grid-wrap { padding: 16px 20px; }
   #grid { height: calc(100vh - 150px); width: 100%; --ag-font-size: 12.6px; }
+  .center-header .ag-header-cell-label { justify-content: center; }
 
   #details-panel { margin: 12px 20px 0; background: #fff; border-radius: 8px; box-shadow: 0 1px 4px rgba(0,0,0,.1); padding: 14px 16px; }
   #details-panel h2 { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px; color: #23324a; margin: 0 0 12px; padding-bottom: 8px; border-bottom: 1px solid #eaecf0; display: flex; justify-content: space-between; align-items: center; }
@@ -212,12 +213,12 @@
     return status === 'none' ? '<span class="tag off">none</span>' : statusTag(status);
   }
 
-  const CENTERED = { cellStyle: { textAlign: 'center' } };
+  const CENTERED = { cellStyle: { textAlign: 'center' }, headerClass: 'center-header' };
 
   const eventColumns = [
     { colId: 'actions', headerName: '', width: 140, pinned: 'left', cellRenderer: cellEventActions, sortable: false, filter: false, resizable: false, suppressMovable: true },
     { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
-    { field: 'external_id', headerName: 'External id', width: 200 },
+    { field: 'external_id', headerName: 'External id', width: 100 },
     { field: 'status', headerName: 'Content Received', width: 150, cellRenderer: cellEventStatus, cellDataType: 'text', ...CENTERED },
     { field: 'attempts', headerName: 'Content Attempts', width: 130, ...CENTERED },
     {
