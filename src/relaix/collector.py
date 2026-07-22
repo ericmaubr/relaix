@@ -26,13 +26,19 @@ class CollectorError(RuntimeError):
 
 
 def fetch_webhook_site_requests(source: WebhookSource) -> list[dict]:
-    """Fetches requests from a webhook.site token via its API. `api_url` is
-    the provider's base URL (e.g. `https://webhook.site`), `channel_id` is
-    the token id, `api_token` is the account's API key."""
+    """Fetches requests from a webhook.site token via its API, newest first.
+    `api_url` is the provider's base URL (e.g. `https://webhook.site`),
+    `channel_id` is the token id, `api_token` is the account's API key.
+
+    Newest-first (not oldest) matters: `poll_source` stops as soon as it
+    hits an item already covered by the cursor, so this bounds the fetch to
+    just the new items regardless of how much history the token has —
+    oldest-first with a single page would silently stop seeing new events
+    once the token passed `per_page` total requests."""
     url = f"{source.api_url.rstrip('/')}/token/{source.channel_id}/requests"
     headers = {"Api-Key": source.api_token} if source.api_token else {}
     resp = requests.get(
-        url, headers=headers, params={"sorting": "oldest", "per_page": 100}, timeout=15
+        url, headers=headers, params={"sorting": "newest", "per_page": 100}, timeout=15
     )
     resp.raise_for_status()
     return resp.json().get("data", [])
@@ -69,10 +75,10 @@ def poll_source(source: WebhookSource, fetch_fn: FetchFn | None = None) -> dict:
     newest_cursor = cursor
     new_count = 0
 
-    for item in items:
+    for item in items:  # newest first — stop at the first already-seen item
         created_at = item.get("created_at", "")
         if cursor and created_at and created_at <= cursor:
-            continue
+            break
         external_id = item.get("uuid") or item.get("id")
         if not external_id:
             continue

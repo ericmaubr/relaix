@@ -22,8 +22,8 @@ def _make_source(**overrides):
 def test_poll_source_records_new_events_and_a_success_log():
     source = _make_source()
     items = [
-        {"uuid": "req-1", "created_at": "2026-07-22T10:00:00", "content": '{"a": 1}'},
         {"uuid": "req-2", "created_at": "2026-07-22T10:01:00", "content": '{"a": 2}'},
+        {"uuid": "req-1", "created_at": "2026-07-22T10:00:00", "content": '{"a": 1}'},
     ]
 
     result = poll_source(source, fetch_fn=lambda s: items)
@@ -51,6 +51,38 @@ def test_poll_source_skips_items_already_seen_via_cursor():
 
     assert result["new_events_found"] == 0
     assert len(EventRepository().list(source.id)) == 1
+
+
+def test_poll_source_stops_at_first_already_seen_item_newest_first():
+    source = _make_source()
+    first_batch = [
+        {"uuid": "req-1", "created_at": "2026-07-22T10:00:00", "content": "{}"}
+    ]
+    poll_source(source, fetch_fn=lambda s: first_batch)
+    source = SourceRepository().get(source.id)
+
+    # newest-first: two new items, then the already-seen one — must stop there
+    # without needing req-1 to be absent or paginated around.
+    fetched = []
+
+    def fetch_fn(s):
+        fetched.append(1)
+        return [
+            {"uuid": "req-3", "created_at": "2026-07-22T10:02:00", "content": "{}"},
+            {"uuid": "req-2", "created_at": "2026-07-22T10:01:00", "content": "{}"},
+            {"uuid": "req-1", "created_at": "2026-07-22T10:00:00", "content": "{}"},
+        ]
+
+    result = poll_source(source, fetch_fn=fetch_fn)
+
+    assert result["new_events_found"] == 2
+    assert {e.external_id for e in EventRepository().list(source.id)} == {
+        "req-1",
+        "req-2",
+        "req-3",
+    }
+    updated_source = SourceRepository().get(source.id)
+    assert updated_source.last_processed_cursor == "2026-07-22T10:02:00"
 
 
 def test_poll_source_skips_duplicate_external_id_even_without_cursor_advance():
