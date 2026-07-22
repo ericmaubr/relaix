@@ -278,6 +278,7 @@
     document.getElementById('f-interval').value = 300;
     document.getElementById('f-max-content-attempts').value = 3;
     document.getElementById('form-panel').classList.remove('hidden');
+    document.getElementById('grid-wrap').classList.add('hidden');
     document.getElementById('f-name').focus();
     showAlert('', '');
   }
@@ -296,12 +297,14 @@
     document.getElementById('f-api-token').value = s.api_token || '';
     document.getElementById('f-channel-id').value = s.channel_id || '';
     document.getElementById('form-panel').classList.remove('hidden');
+    document.getElementById('grid-wrap').classList.add('hidden');
     document.getElementById('f-name').focus();
     showAlert('', '');
   }
 
   function closeForm() {
     document.getElementById('form-panel').classList.add('hidden');
+    document.getElementById('grid-wrap').classList.remove('hidden');
     document.getElementById('source-form').reset();
   }
 

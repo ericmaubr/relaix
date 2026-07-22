@@ -322,6 +322,7 @@
     document.getElementById('conditions-list').innerHTML = '';
     addConditionRow();
     document.getElementById('form-panel').classList.remove('hidden');
+    document.getElementById('grid-wrap').classList.add('hidden');
     document.getElementById('f-name').focus();
     showAlert('', '');
   }
@@ -339,12 +340,14 @@
     document.getElementById('conditions-list').innerHTML = '';
     (r.conditions.length ? r.conditions : [null]).forEach(c => addConditionRow(c || undefined));
     document.getElementById('form-panel').classList.remove('hidden');
+    document.getElementById('grid-wrap').classList.add('hidden');
     document.getElementById('f-name').focus();
     showAlert('', '');
   }
 
   function closeForm() {
     document.getElementById('form-panel').classList.add('hidden');
+    document.getElementById('grid-wrap').classList.remove('hidden');
     document.getElementById('rule-form').reset();
     document.getElementById('conditions-list').innerHTML = '';
   }
