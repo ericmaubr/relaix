@@ -91,6 +91,38 @@ def get_version():
     return {"version": pkg_version()}
 
 
+@app.get("/status", include_in_schema=False)
+def get_status():
+    from conta_tools_shared.status import StatusFile, build_status
+    from relaix.status_paths import CAMINHO_COLLECT, CAMINHO_EXECUTE
+
+    execute_estado = StatusFile(CAMINHO_EXECUTE).ler()
+    collect_estado = StatusFile(CAMINHO_COLLECT).ler()
+
+    if execute_estado is None and collect_estado is None:
+        return build_status()
+
+    partes_ok = []
+    erros = []
+    counters: dict = {}
+    last_run_at = None
+    for rotulo, estado in (("execute", execute_estado), ("collect", collect_estado)):
+        if estado is None:
+            continue
+        last_run_at = max(filter(None, [last_run_at, estado["last_run_at"]]))
+        partes_ok.append(estado["last_run_ok"])
+        if not estado["last_run_ok"]:
+            erros.append(f"{rotulo}: {estado['last_error']}")
+        counters[rotulo] = estado["counters"]
+
+    return build_status(
+        last_run_at=last_run_at,
+        last_run_ok=all(partes_ok),
+        last_error="; ".join(erros) if erros else None,
+        counters=counters,
+    )
+
+
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
 def index_ui():
     return HTMLResponse((_STATIC_DIR / "index.html").read_text(encoding="utf-8"))

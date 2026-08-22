@@ -26,17 +26,29 @@ def main_execute(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     configure_db(args)
 
+    from conta_tools_shared.status import StatusFile
     from relaix.executor import dispatch_pending_executions, evaluate_pending_events
+    from relaix.status_paths import CAMINHO_EXECUTE
+
+    status_file = StatusFile(CAMINHO_EXECUTE)
 
     while True:
-        evaluated = evaluate_pending_events()
-        dispatched = dispatch_pending_executions()
-        print(
-            f"Evaluated {evaluated['events_processed']} event(s), "
-            f"{evaluated['rules_matched']} rule match(es); "
-            f"dispatched {dispatched['dispatched']}, "
-            f"{dispatched['succeeded']} succeeded."
-        )
+        try:
+            evaluated = evaluate_pending_events()
+            dispatched = dispatch_pending_executions()
+            print(
+                f"Evaluated {evaluated['events_processed']} event(s), "
+                f"{evaluated['rules_matched']} rule match(es); "
+                f"dispatched {dispatched['dispatched']}, "
+                f"{dispatched['succeeded']} succeeded."
+            )
+            status_file.registrar(
+                ok=True,
+                counters={"dispatched": dispatched["dispatched"], "succeeded": dispatched["succeeded"]},
+            )
+        except Exception as exc:
+            status_file.registrar(ok=False, erro=str(exc))
+            raise
         if args.once:
             return 0
         time.sleep(args.interval)

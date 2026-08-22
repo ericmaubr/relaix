@@ -26,12 +26,21 @@ def main_collect(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     configure_db(args)
 
+    from conta_tools_shared.status import StatusFile
     from relaix.collector import poll_all_active_sources
+    from relaix.status_paths import CAMINHO_COLLECT
+
+    status_file = StatusFile(CAMINHO_COLLECT)
 
     while True:
-        results = poll_all_active_sources()
-        new_total = sum(r["new_events_found"] for r in results)
-        print(f"Polled {len(results)} source(s), {new_total} new event(s).")
+        try:
+            results = poll_all_active_sources()
+            new_total = sum(r["new_events_found"] for r in results)
+            print(f"Polled {len(results)} source(s), {new_total} new event(s).")
+            status_file.registrar(ok=True, counters={"sources": len(results), "new_events": new_total})
+        except Exception as exc:
+            status_file.registrar(ok=False, erro=str(exc))
+            raise
         if args.once:
             return 0
         time.sleep(args.interval)
