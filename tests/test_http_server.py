@@ -25,6 +25,35 @@ def test_version(client):
     assert "version" in resp.json()
 
 
+def test_status_sem_nenhum_loop_rodado_ainda(client, monkeypatch, tmp_path):
+    from relaix import status_paths
+    monkeypatch.setattr(status_paths, "CAMINHO_EXECUTE", tmp_path / "execute.json")
+    monkeypatch.setattr(status_paths, "CAMINHO_COLLECT", tmp_path / "collect.json")
+
+    resp = client.get("/status")
+    assert resp.status_code == 200
+    assert resp.json()["last_run_at"] is None
+
+
+def test_status_reporta_pior_dos_dois_loops(client, monkeypatch, tmp_path):
+    from conta_tools_shared.status import StatusFile
+    from relaix import status_paths
+
+    caminho_execute = tmp_path / "execute.json"
+    caminho_collect = tmp_path / "collect.json"
+    monkeypatch.setattr(status_paths, "CAMINHO_EXECUTE", caminho_execute)
+    monkeypatch.setattr(status_paths, "CAMINHO_COLLECT", caminho_collect)
+
+    StatusFile(caminho_execute).registrar(ok=True, counters={"dispatched": 3})
+    StatusFile(caminho_collect).registrar(ok=False, erro="fonte X indisponível")
+
+    resp = client.get("/status")
+    corpo = resp.json()
+    assert corpo["last_run_ok"] is False
+    assert "collect" in corpo["last_error"]
+    assert "fonte X indisponível" in corpo["last_error"]
+
+
 def test_source_crud(client):
     resp = client.post(
         "/sources", json={"name": "Source A", "api_url": "https://example.com"}
