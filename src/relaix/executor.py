@@ -14,6 +14,8 @@ import json
 
 import requests
 
+from relaix.domain import WebhookSource
+from relaix.email_parsing import build_email_envelope
 from relaix.matching import rule_matches
 from relaix.repository import (
     EventRepository,
@@ -21,6 +23,26 @@ from relaix.repository import (
     RuleRepository,
     SourceRepository,
 )
+
+
+def _decode_payload(raw_payload: str, source: WebhookSource | None) -> dict:
+    """Turns a stored `raw_payload` (the full webhook.site item — see
+    collector.py) into the payload rules/dispatch actually operate on.
+
+    - `type: "email"` → build the `{"email": {...}}` envelope (downloads
+      attachments — see email_parsing.py).
+    - `type: "web"` (or anything with a `content` key) → unchanged from
+      before: `content` is the raw JSON body G-Click posted, so this keeps
+      existing rules (`message.tarefa.nome`, ...) matching exactly as today.
+    - Neither key present → the event was stored before this format existed
+      (already-pending/error at deploy time) — treat it as the message
+      itself, the old behavior."""
+    item = json.loads(raw_payload)
+    if item.get("type") == "email":
+        return build_email_envelope(item, source)
+    if "content" in item:
+        return json.loads(item["content"])
+    return item
 
 
 def evaluate_pending_events(batch_size: int = 50) -> dict:
@@ -40,11 +62,11 @@ def evaluate_pending_events(batch_size: int = 50) -> dict:
     )
 
     for event in candidates:
+        source = sources.get(event.source_id)
         if event.status == "error":
             # malformed content never fixes itself — unlike a dispatch
             # failure, retrying forever just burns cycles, so this is
             # capped per-source (source.max_content_attempts).
-            source = sources.get(event.source_id)
             max_attempts = source.max_content_attempts if source else 3
             if event.attempts >= max_attempts:
                 continue
@@ -53,8 +75,8 @@ def evaluate_pending_events(batch_size: int = 50) -> dict:
         processed += 1
 
         try:
-            payload = json.loads(event.raw_payload)
-        except ValueError:
+            payload = _decode_payload(event.raw_payload, source)
+        except (ValueError, requests.RequestException):
             events.finish(event.id, "error", event.attempts + 1)
             continue
 
@@ -77,6 +99,7 @@ def dispatch_pending_executions(batch_size: int = 50) -> dict:
     executions = RuleExecutionRepository()
     rules_repo = RuleRepository()
     events = EventRepository()
+    sources = SourceRepository()
 
     dispatched = 0
     succeeded = 0
@@ -102,8 +125,16 @@ def dispatch_pending_executions(batch_size: int = 50) -> dict:
             headers["Authorization"] = f"Bearer {rule.action_token}"
 
         try:
+            # Re-decoded here (not reused from evaluate_pending_events) since
+            # the payload isn't persisted — see executor.py's `_decode_payload`
+            # docstring. For email events this re-downloads attachments; an
+            # acceptable cost at the current low volume, not worth a schema
+            # change to cache it.
+            body = json.dumps(
+                _decode_payload(event.raw_payload, sources.get(event.source_id))
+            )
             resp = requests.post(
-                rule.action_url, data=event.raw_payload, headers=headers, timeout=30
+                rule.action_url, data=body, headers=headers, timeout=30
             )
             status = "success" if resp.ok else "error"
             if status == "success":

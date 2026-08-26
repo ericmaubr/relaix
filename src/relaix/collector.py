@@ -82,7 +82,12 @@ def poll_source(source: WebhookSource, fetch_fn: FetchFn | None = None) -> dict:
         external_id = item.get("uuid") or item.get("id")
         if not external_id:
             continue
-        raw_payload = item.get("content") or json.dumps(item)
+        # The full item is kept (not just `content`) — webhook.site's `type`
+        # field ("web" vs "email") and, for email, its already-parsed
+        # `sender`/`headers`/`text_content`/`files` are needed downstream by
+        # the Executor to build the email envelope (see email_parsing.py).
+        # Nothing is lost: `content` is still nested inside for "web" events.
+        raw_payload = json.dumps(item)
         try:
             events.create(source.id, str(external_id), raw_payload)
             new_count += 1

@@ -101,6 +101,47 @@ def test_evaluate_pending_events_stops_retrying_malformed_content_at_source_cap(
     assert EventRepository().get(event.id).attempts == 2
 
 
+def test_evaluate_pending_events_unwraps_collector_item_for_web_type():
+    """Collector now stores the full webhook.site item, not just `content`
+    (see collector.py) — a `type: "web"` item must still match on
+    `message.*` exactly like before, via the nested `content` JSON string."""
+    source = _make_source()
+    rule = _make_rule(
+        source.id,
+        [{"field_path": "message.name", "operator": "=", "value": "expected"}],
+    )
+    item = {"type": "web", "content": json.dumps({"message": {"name": "expected"}})}
+    event = EventRepository().create(source.id, "ext-1", json.dumps(item))
+
+    result = evaluate_pending_events()
+
+    assert result == {"events_processed": 1, "rules_matched": 1}
+    assert RuleExecutionRepository().list(event_id=event.id)[0].rule_id == rule.id
+
+
+def test_evaluate_pending_events_builds_email_envelope_for_email_type():
+    source = _make_source()
+    rule = _make_rule(
+        source.id,
+        [{"field_path": "email.subject", "operator": "=", "value": "teste"}],
+    )
+    item = {
+        "type": "email",
+        "uuid": "req-1",
+        "sender": "a@b.com",
+        "destinations": ["glick-tarefa@emailhook.site"],
+        "headers": {"subject": ["teste"]},
+        "text_content": "corpo",
+        "files": [],
+    }
+    event = EventRepository().create(source.id, "ext-1", json.dumps(item))
+
+    result = evaluate_pending_events()
+
+    assert result == {"events_processed": 1, "rules_matched": 1}
+    assert RuleExecutionRepository().list(event_id=event.id)[0].rule_id == rule.id
+
+
 def test_evaluate_pending_events_is_idempotent_for_already_matched_event():
     source = _make_source()
     rule = _make_rule(
