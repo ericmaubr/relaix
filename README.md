@@ -69,6 +69,28 @@ rule with zero conditions never matches (no accidental catch-all).
   and a manual "reset to pending" action, not corrected by a background
   timeout policy.
 
+## Retry caps
+
+Two independent stages, two independent retry counters — each with its own
+cap on the source (`max_content_attempts`, `max_dispatch_attempts`):
+
+1. **Reading the event** (`evaluate_pending_events`) — can relaix understand
+   what arrived? A payload that fails to parse (broken JSON, an email
+   attachment that can't be downloaded) fails here. Counted in
+   `webhook_event.attempts`. At the cap, the event just stays at
+   `status = "error"` and stops being retried.
+2. **Delivering it** (`dispatch_pending_executions`) — did the outbound POST
+   to the rule's `action_url` succeed? A destination that's down, times out,
+   or returns a non-2xx response fails here — including a destination that
+   fails for reasons that will never fix themselves, like a payload pointing
+   at a resource whose URL has already expired. Counted in
+   `webhook_rule_execution.attempts`. At the cap, the execution moves to
+   `status = "abandoned"` and stops being retried.
+
+Without the dispatch cap, an event whose payload embeds a time-limited
+resource (a presigned download link, for example) would retry forever with
+zero chance of ever succeeding.
+
 ## UI
 
 Three pages, served by `relaix` itself (`/`, `/rules-ui`, `/history-ui`):

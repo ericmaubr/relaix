@@ -58,6 +58,10 @@
   .form-panel .row { display: flex; gap: 12px; flex-wrap: wrap; }
   .form-panel label { display: block; max-width: 280px; flex: 1; min-width: 180px; }
   .form-panel label span { display: block; font-size: 11px; color: #666; margin-bottom: 3px; }
+  .form-panel label[title] { cursor: help; }
+  .field-help { margin-top: 10px; font-size: 12px; color: #444; }
+  .field-help summary { cursor: pointer; color: #6b7280; }
+  .field-help p { margin: 8px 0 0; line-height: 1.5; max-width: 640px; }
   .form-panel input[type=text], .form-panel input[type=number], .form-panel select {
     width: 100%; padding: 6px 8px; border: 1px solid #ccc; border-radius: 5px; font-size: 13px; background: #fff;
   }
@@ -118,16 +122,22 @@
         <label><span>Kind</span>
           <select id="f-kind"><option value="webhook_site">webhook_site</option></select>
         </label>
-        <label><span>Polling interval (seconds)</span>
+        <label title="How often the collector polls this source for new events, in seconds."><span>Polling interval (seconds)</span>
           <input type="number" id="f-interval" min="10" value="300" required>
         </label>
-        <label><span>Max content attempts</span>
+        <label title="How many times a pending/error event retries after failing to parse (e.g. malformed JSON) before giving up. At the cap it stays at status &quot;error&quot; and is no longer retried."><span>Max content attempts</span>
           <input type="number" id="f-max-content-attempts" min="1" max="99" value="3" required>
         </label>
-        <label><span>Max dispatch attempts</span>
+        <label title="How many times a rule match retries POSTing to the rule's action URL after a failed delivery before giving up. At the cap the execution moves to status &quot;abandoned&quot; and is no longer retried — prevents an infinite loop when the content can never succeed (e.g. an expired download link)."><span>Max dispatch attempts</span>
           <input type="number" id="f-max-dispatch-attempts" min="1" max="99" value="3" required>
         </label>
       </div>
+      <details class="field-help">
+        <summary>What do these three fields control?</summary>
+        <p><strong>Polling interval</strong> — how often relaix checks this source for anything new, in seconds.</p>
+        <p><strong>Max content attempts</strong> — sometimes a message that arrives is broken and can't be read at all. This is how many times relaix tries again before giving up on it. When it gives up, that message stays stuck with an <strong>"error"</strong> status in History — nothing gets sent anywhere for it, so it's worth checking History now and then.</p>
+        <p><strong>Max dispatch attempts</strong> — once a message is understood and matches a rule, relaix tries to deliver it to wherever that rule points. That delivery can fail — the destination might be briefly down, or the message might point to something that's no longer available (like a download link that already expired). This is how many times relaix retries the delivery before giving up. When it gives up, that delivery shows an <strong>"abandoned"</strong> status in History and won't be tried again on its own.</p>
+      </details>
       <div class="row" style="margin-top: 10px;">
         <label><span>API base URL</span><input type="text" id="f-api-url" placeholder="https://webhook.site" required></label>
         <label><span>API key</span><input type="text" id="f-api-token"></label>
@@ -181,9 +191,12 @@
     { field: 'kind', headerName: 'Kind', width: 130 },
     { field: 'api_url', headerName: 'API base URL', flex: 1, minWidth: 200 },
     { field: 'channel_id', headerName: 'Channel / token id', width: 180 },
-    { field: 'polling_interval_seconds', headerName: 'Interval (s)', width: 120 },
-    { field: 'max_content_attempts', headerName: 'Max content attempts', width: 120 },
-    { field: 'max_dispatch_attempts', headerName: 'Max dispatch attempts', width: 120 },
+    { field: 'polling_interval_seconds', headerName: 'Interval (s)', width: 120,
+      headerTooltip: 'How often the collector polls this source for new events, in seconds.' },
+    { field: 'max_content_attempts', headerName: 'Max content attempts', width: 120,
+      headerTooltip: 'How many times a pending/error event retries after failing to parse (e.g. malformed JSON) before giving up. At the cap it stays at status "error" and is no longer retried.' },
+    { field: 'max_dispatch_attempts', headerName: 'Max dispatch attempts', width: 120,
+      headerTooltip: 'How many times a rule match retries POSTing to the rule\'s action URL after a failed delivery before giving up. At the cap the execution moves to status "abandoned" and is no longer retried — prevents an infinite loop when the content can never succeed (e.g. an expired download link).' },
     { field: 'last_processed_cursor', headerName: 'Last cursor', width: 180 },
     { field: 'active', headerName: 'Status', width: 110, cellRenderer: cellActive, valueGetter: p => p.data ? (p.data.active ? 'active' : 'inactive') : '' },
   ];
