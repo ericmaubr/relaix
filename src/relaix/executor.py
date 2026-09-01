@@ -108,12 +108,29 @@ def dispatch_pending_executions(batch_size: int = 50) -> dict:
     )
 
     for execution in candidates:
+        event = events.get(execution.event_id)
+        if execution.status == "error":
+            # A dispatch failure can be transient (target down briefly), so
+            # unlike content parsing this used to retry unbounded — but
+            # content that embeds a time-limited resource (e.g. a presigned
+            # download URL) never becomes valid again either, so it still
+            # needs a ceiling. Mirrors source.max_content_attempts.
+            source = sources.get(event.source_id) if event else None
+            max_attempts = source.max_dispatch_attempts if source else 3
+            if execution.attempts >= max_attempts:
+                executions.finish(
+                    execution.id,
+                    "abandoned",
+                    response_detail="max dispatch attempts reached",
+                    bump_attempts=False,
+                )
+                continue
+
         if not executions.claim(execution.id):
             continue  # another worker already claimed it
         dispatched += 1
 
         rule = rules_repo.get(execution.rule_id)
-        event = events.get(execution.event_id)
         if rule is None or event is None:
             executions.finish(
                 execution.id, "error", response_detail="rule or event no longer exists"

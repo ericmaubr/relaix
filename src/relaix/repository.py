@@ -58,6 +58,7 @@ def _row_to_source(row) -> WebhookSource:
         channel_id=m["channel_id"],
         polling_interval_seconds=m["polling_interval_seconds"],
         max_content_attempts=m["max_content_attempts"],
+        max_dispatch_attempts=m["max_dispatch_attempts"],
         last_processed_cursor=m["last_processed_cursor"],
         active=bool(m["active"]),
         created_at=m["created_at"] or "",
@@ -146,6 +147,7 @@ class SourceRepository:
         channel_id: str | None = None,
         polling_interval_seconds: int = 300,
         max_content_attempts: int = 3,
+        max_dispatch_attempts: int = 3,
     ) -> WebhookSource:
         now = _now()
         values = dict(
@@ -157,6 +159,7 @@ class SourceRepository:
             channel_id=channel_id,
             polling_interval_seconds=polling_interval_seconds,
             max_content_attempts=max_content_attempts,
+            max_dispatch_attempts=max_dispatch_attempts,
             last_processed_cursor=None,
             active=True,
             created_at=now,
@@ -499,7 +502,11 @@ class RuleExecutionRepository:
         status: str,
         response_http_status: int | None = None,
         response_detail: str | None = None,
+        bump_attempts: bool = True,
     ) -> None:
+        """bump_attempts=False for a terminal decision that didn't actually
+        dispatch (e.g. giving up at the attempts cap) — nothing was tried,
+        so the counter shouldn't move."""
         with self._engine.begin() as conn:
             current = conn.execute(
                 select(t_rule_execution.c.attempts).where(
@@ -511,7 +518,7 @@ class RuleExecutionRepository:
                 .where(t_rule_execution.c.id == execution_id)
                 .values(
                     status=status,
-                    attempts=current + 1,
+                    attempts=current + 1 if bump_attempts else current,
                     response_http_status=response_http_status,
                     response_detail=response_detail,
                     executed_at=_now(),

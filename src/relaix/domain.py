@@ -19,6 +19,7 @@ class WebhookSource:
     channel_id: str | None
     polling_interval_seconds: int
     max_content_attempts: int
+    max_dispatch_attempts: int
     last_processed_cursor: str | None
     active: bool
     created_at: str

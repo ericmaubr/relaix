@@ -57,6 +57,7 @@ class SourceRequest(BaseModel):
     channel_id: str | None = None
     polling_interval_seconds: int = 300
     max_content_attempts: int = Field(3, ge=1, le=99)
+    max_dispatch_attempts: int = Field(3, ge=1, le=99)
 
 
 class SourceUpdateRequest(BaseModel):
@@ -66,6 +67,7 @@ class SourceUpdateRequest(BaseModel):
     channel_id: str | None = None
     polling_interval_seconds: int | None = None
     max_content_attempts: int | None = Field(None, ge=1, le=99)
+    max_dispatch_attempts: int | None = Field(None, ge=1, le=99)
     active: bool | None = None
 
 

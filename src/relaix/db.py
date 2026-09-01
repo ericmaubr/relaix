@@ -46,6 +46,13 @@ webhook_source = Table(
     # unlike a transient dispatch failure, malformed content never fixes
     # itself, so retrying forever just burns cycles (see evaluate_pending_events).
     Column("max_content_attempts", Integer, nullable=False, server_default="3"),
+    # Caps automatic retry of rule dispatches (webhook_rule_execution) —
+    # separate counter from max_content_attempts above: a dispatch failure
+    # can be transient (target down for a minute), but content that embeds
+    # a time-limited resource (e.g. a presigned download URL) never becomes
+    # valid again either, so this still needs a ceiling (see
+    # dispatch_pending_executions).
+    Column("max_dispatch_attempts", Integer, nullable=False, server_default="3"),
     Column("last_processed_cursor", String),
     Column("active", Boolean, nullable=False, server_default="1"),
     Column("created_at", String),

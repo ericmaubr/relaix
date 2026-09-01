@@ -14,6 +14,7 @@ _SOURCE = WebhookSource(
     channel_id="token-abc",
     polling_interval_seconds=300,
     max_content_attempts=3,
+    max_dispatch_attempts=3,
     last_processed_cursor=None,
     active=True,
     created_at="",

@@ -249,3 +249,38 @@ def test_dispatch_pending_executions_retries_error_executions(monkeypatch):
     execution = RuleExecutionRepository().list(event_id=event.id)[0]
     assert execution.status == "success"
     assert execution.attempts == 2
+
+
+def test_dispatch_pending_executions_abandons_at_source_dispatch_cap(monkeypatch):
+    source = SourceRepository().create(
+        name="Source", api_url="https://example.com", max_dispatch_attempts=2
+    )
+    _make_rule(
+        source.id,
+        [{"field_path": "message.name", "operator": "=", "value": "expected"}],
+    )
+    event = _make_event(source.id, {"message": {"name": "expected"}})
+    evaluate_pending_events()
+
+    import relaix.executor as executor_module
+
+    monkeypatch.setattr(
+        executor_module.requests,
+        "post",
+        lambda *a, **kw: (_ for _ in ()).throw(
+            executor_module.requests.RequestException("expired link")
+        ),
+    )
+    dispatch_pending_executions()  # attempt 1 -> error
+    assert RuleExecutionRepository().list(event_id=event.id)[0].attempts == 1
+
+    dispatch_pending_executions()  # attempt 2 -> error, now at the cap
+    execution = RuleExecutionRepository().list(event_id=event.id)[0]
+    assert execution.attempts == 2
+    assert execution.status == "error"
+
+    result = dispatch_pending_executions()  # capped — must not retry a 3rd time
+    assert result == {"dispatched": 0, "succeeded": 0}
+    execution = RuleExecutionRepository().list(event_id=event.id)[0]
+    assert execution.status == "abandoned"
+    assert execution.attempts == 2
