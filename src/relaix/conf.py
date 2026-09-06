@@ -2,10 +2,9 @@
 
 from __future__ import annotations
 
+import configparser
 from dataclasses import dataclass
 from pathlib import Path
-
-from conta_tools_shared.config import carregar_ini
 
 
 @dataclass
@@ -33,9 +32,14 @@ def load_api_conf(path: Path) -> ApiConf:
     if not path.exists():
         raise FileNotFoundError(f"api.conf not found: {path}")
 
-    # carregar_ini lê utf-8-sig (BOM do Notepad já quebrou parse em produção)
-    # com fallback cp1252 — padrão do ecossistema.
-    cfg = carregar_ini(path)
+    # utf-8-sig (BOM do Notepad já quebrou parse em produção) com fallback
+    # cp1252 — mesmo comportamento do carregar_ini do ecossistema, inline
+    # porque o relaix é independente e não depende do conta-tools-shared.
+    cfg = configparser.ConfigParser(inline_comment_prefixes=(";",))
+    try:
+        cfg.read(path, encoding="utf-8-sig")
+    except UnicodeDecodeError:
+        cfg.read(path, encoding="cp1252")
 
     api_sec = cfg["api"] if "api" in cfg else {}
     host = api_sec.get("host", "127.0.0.1").strip()
