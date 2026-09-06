@@ -26,7 +26,7 @@ def main_execute(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     configure_db(args)
 
-    from conta_tools_shared.status import StatusFile
+    from relaix.status_file import StatusFile
     from relaix.executor import dispatch_pending_executions, evaluate_pending_events
     from relaix.status_paths import CAMINHO_EXECUTE
 

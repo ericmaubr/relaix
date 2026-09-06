@@ -26,7 +26,7 @@ def main_collect(argv: list[str]) -> int:
     args = parser.parse_args(argv)
     configure_db(args)
 
-    from conta_tools_shared.status import StatusFile
+    from relaix.status_file import StatusFile
     from relaix.collector import poll_all_active_sources
     from relaix.status_paths import CAMINHO_COLLECT
 

@@ -117,7 +117,7 @@ def get_version():
 
 @app.get("/status", include_in_schema=False)
 def get_status():
-    from conta_tools_shared.status import StatusFile, build_status
+    from relaix.status_file import StatusFile, build_status
     from relaix.status_paths import CAMINHO_COLLECT, CAMINHO_EXECUTE
 
     execute_estado = StatusFile(CAMINHO_EXECUTE).ler()

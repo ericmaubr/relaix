@@ -38,7 +38,7 @@ def test_status_sem_nenhum_loop_rodado_ainda(client, monkeypatch, tmp_path):
 
 
 def test_status_reporta_pior_dos_dois_loops(client, monkeypatch, tmp_path):
-    from conta_tools_shared.status import StatusFile
+    from relaix.status_file import StatusFile
     from relaix import status_paths
 
     caminho_execute = tmp_path / "execute.json"
