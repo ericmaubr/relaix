@@ -2,9 +2,10 @@
 
 from __future__ import annotations
 
-import configparser
 from dataclasses import dataclass
 from pathlib import Path
+
+from conta_tools_shared.config import carregar_ini
 
 
 @dataclass
@@ -32,8 +33,9 @@ def load_api_conf(path: Path) -> ApiConf:
     if not path.exists():
         raise FileNotFoundError(f"api.conf not found: {path}")
 
-    cfg = configparser.ConfigParser(inline_comment_prefixes=(";",))
-    cfg.read(path, encoding="utf-8")
+    # carregar_ini lê utf-8-sig (BOM do Notepad já quebrou parse em produção)
+    # com fallback cp1252 — padrão do ecossistema.
+    cfg = carregar_ini(path)
 
     api_sec = cfg["api"] if "api" in cfg else {}
     host = api_sec.get("host", "127.0.0.1").strip()
