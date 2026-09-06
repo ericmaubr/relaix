@@ -32,7 +32,9 @@ def test_status_sem_nenhum_loop_rodado_ainda(client, monkeypatch, tmp_path):
 
     resp = client.get("/status")
     assert resp.status_code == 200
-    assert resp.json()["last_run_at"] is None
+    corpo = resp.json()
+    assert corpo["last_run_at"] is None
+    assert isinstance(corpo["versao"], str) and corpo["versao"]
 
 
 def test_status_reporta_pior_dos_dois_loops(client, monkeypatch, tmp_path):

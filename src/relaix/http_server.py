@@ -37,6 +37,14 @@ def _check_migracao_pendente() -> None:
     MIGRACAO_PENDENTE = check_migracao_pendente()
 
 
+try:
+    from importlib.metadata import version
+
+    _versao = version("relaix")
+except Exception:
+    _versao = "dev"
+
+
 def set_api_token(token: str) -> None:
     global _api_token
     _api_token = token
@@ -139,6 +147,7 @@ def get_status():
         )
 
     resultado["migracao_pendente"] = MIGRACAO_PENDENTE
+    resultado["versao"] = _versao
     return resultado
 
 
