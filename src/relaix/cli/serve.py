@@ -46,5 +46,18 @@ def main_serve(argv: list[str]) -> int:
         set_api_token(api_token)
 
     print(f"Starting HTTP API on http://{host}:{port}")
-    uvicorn.run(app, host=host, port=port)
+    uvicorn.run(app, host=host, port=port, log_config=_uvicorn_log_config())
     return 0
+
+
+def _uvicorn_log_config() -> dict:
+    """Copy of uvicorn's LOGGING_CONFIG with timestamps prefixed on each formatter."""
+    import copy
+
+    from uvicorn.config import LOGGING_CONFIG
+
+    config = copy.deepcopy(LOGGING_CONFIG)
+    for formatter in config["formatters"].values():
+        formatter["fmt"] = "%(asctime)s | " + formatter["fmt"]
+        formatter["datefmt"] = "%Y-%m-%d %H:%M:%S"
+    return config
