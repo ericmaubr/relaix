@@ -54,6 +54,18 @@ def test_status_reporta_pior_dos_dois_loops(client, monkeypatch, tmp_path):
     assert "fonte X indisponível" in corpo["last_error"]
 
 
+def test_status_expoe_migracao_pendente():
+    """Ecosystem audit 2026-09 item 6 — checked at startup via
+    relaix.migracao_check (no conta_tools_shared — relaix is independent).
+    Only asserts presence + accepted type (True/False/None) — the actual
+    value depends on the packaged alembic state."""
+    with TestClient(app) as ctx_client:
+        resp = ctx_client.get("/status")
+    corpo = resp.json()
+    assert "migracao_pendente" in corpo
+    assert corpo["migracao_pendente"] in (True, False, None)
+
+
 def test_source_crud(client):
     resp = client.post(
         "/sources", json={"name": "Source A", "api_url": "https://example.com"}

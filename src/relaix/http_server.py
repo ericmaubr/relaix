@@ -22,6 +22,20 @@ app = FastAPI(
 
 _api_token: str | None = None
 
+MIGRACAO_PENDENTE: bool | None = None
+"""Ecosystem audit 2026-09 item 6: alarm for a stale schema (CRITICAL log +
+field below in /status) — best-effort, never blocks boot. relaix is
+independent (no conta_tools_shared), so the check itself lives inline in
+relaix.migracao_check."""
+
+
+@app.on_event("startup")
+def _check_migracao_pendente() -> None:
+    global MIGRACAO_PENDENTE
+    from relaix.migracao_check import check_migracao_pendente
+
+    MIGRACAO_PENDENTE = check_migracao_pendente()
+
 
 def set_api_token(token: str) -> None:
     global _api_token
@@ -102,27 +116,30 @@ def get_status():
     collect_estado = StatusFile(CAMINHO_COLLECT).ler()
 
     if execute_estado is None and collect_estado is None:
-        return build_status()
+        resultado = build_status()
+    else:
+        partes_ok = []
+        erros = []
+        counters: dict = {}
+        last_run_at = None
+        for rotulo, estado in (("execute", execute_estado), ("collect", collect_estado)):
+            if estado is None:
+                continue
+            last_run_at = max(filter(None, [last_run_at, estado["last_run_at"]]))
+            partes_ok.append(estado["last_run_ok"])
+            if not estado["last_run_ok"]:
+                erros.append(f"{rotulo}: {estado['last_error']}")
+            counters[rotulo] = estado["counters"]
 
-    partes_ok = []
-    erros = []
-    counters: dict = {}
-    last_run_at = None
-    for rotulo, estado in (("execute", execute_estado), ("collect", collect_estado)):
-        if estado is None:
-            continue
-        last_run_at = max(filter(None, [last_run_at, estado["last_run_at"]]))
-        partes_ok.append(estado["last_run_ok"])
-        if not estado["last_run_ok"]:
-            erros.append(f"{rotulo}: {estado['last_error']}")
-        counters[rotulo] = estado["counters"]
+        resultado = build_status(
+            last_run_at=last_run_at,
+            last_run_ok=all(partes_ok),
+            last_error="; ".join(erros) if erros else None,
+            counters=counters,
+        )
 
-    return build_status(
-        last_run_at=last_run_at,
-        last_run_ok=all(partes_ok),
-        last_error="; ".join(erros) if erros else None,
-        counters=counters,
-    )
+    resultado["migracao_pendente"] = MIGRACAO_PENDENTE
+    return resultado
 
 
 @app.get("/", response_class=HTMLResponse, include_in_schema=False)
