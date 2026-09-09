@@ -360,7 +360,15 @@
   async function toggleActive(id, newActive) {
     try {
       await api('PATCH', 'sources/' + id, { active: newActive });
-      await load();
+      // Updates just the touched row instead of a full reload (found
+      // 2026-09-09, same pattern as ecac's "Tratada" checkbox) -- the
+      // Status column has its own floatingFilter, so onFilterChanged()
+      // re-evaluates it locally (no network call) and hides the row if the
+      // user is filtering by active/inactive.
+      gridApi.forEachNode(node => {
+        if (node.data && node.data.id === id) node.setDataValue('active', newActive);
+      });
+      gridApi.onFilterChanged();
     } catch (err) {
       showAlert('error', err.message);
     }
