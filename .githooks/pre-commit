@@ -1,0 +1,30 @@
+#!/bin/sh
+# conta-tools hardening pre-commit — VERSIONADO (este arquivo está no repo).
+#
+# Ligado por: git config core.hooksPath .githooks
+# (o instalar_hooks.py do conta-tools-shared faz isso em todos os repos)
+#
+# O git nunca roda hooks vindos do repo sozinho, por segurança — então esse
+# `git config` é inevitável, uma vez por clone. O que este arquivo resolve é o
+# resto: antes, o hook só existia dentro do .git/ de UMA máquina e apontava por
+# caminho absoluto pra C:/dev/conta-tools-shared/scripts/auditoria. Em qualquer
+# outro clone a proteção era zero, sem aviso nenhum.
+#
+# Os detectores moram no pacote conta_tools_shared, então isto funciona onde
+# quer que ele esteja instalado — inclusive no servidor.
+python -m conta_tools_shared.auditoria.checar_staged
+rc=$?
+if [ $rc -eq 1 ]; then
+  exit 1
+fi
+if [ $rc -ne 0 ]; then
+  # O checador não rodou (conta_tools_shared não instalado neste ambiente).
+  # Avisa alto e DEIXA passar: travar todo commit de um clone recém-feito,
+  # antes de instalar dependência, seria hostil. Quem garante de verdade é o
+  # CI, que roda onde ninguém pula.
+  echo "[conta-tools pre-commit] AVISO: nao consegui rodar os detectores"
+  echo "  (python -m conta_tools_shared.auditoria.checar_staged falhou, rc=$rc)."
+  echo "  Instale o shared neste ambiente: pip install -e ../conta-tools-shared"
+  echo "  O commit segue SEM as verificacoes de hardening."
+fi
+exit 0
