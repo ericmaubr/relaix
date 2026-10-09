@@ -75,6 +75,7 @@ def _row_to_rule(row) -> WebhookRule:
         active=bool(m["active"]),
         action_url=m["action_url"],
         action_token=m["action_token"],
+        dispatch_timeout_seconds=m["dispatch_timeout_seconds"],
         created_at=m["created_at"] or "",
         updated_at=m["updated_at"] or "",
     )
@@ -210,6 +211,7 @@ class RuleRepository:
         action_url: str,
         action_token: str | None = None,
         conditions: list[dict] | None = None,
+        dispatch_timeout_seconds: int = 30,
     ) -> WebhookRule:
         now = _now()
         rule_id = _new_id()
@@ -222,6 +224,7 @@ class RuleRepository:
                     active=True,
                     action_url=action_url,
                     action_token=action_token,
+                    dispatch_timeout_seconds=dispatch_timeout_seconds,
                     created_at=now,
                     updated_at=now,
                 )

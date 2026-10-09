@@ -102,6 +102,10 @@ webhook_rule = Table(
     Column("active", Boolean, nullable=False, server_default="1"),
     Column("action_url", String, nullable=False),
     Column("action_token", String),
+    # How long the executor waits for the action URL to answer before treating the
+    # dispatch as failed. A slow target (e.g. a long batch job) needs more than the
+    # default, or the dispatch is retried and abandoned while the target still works.
+    Column("dispatch_timeout_seconds", Integer, nullable=False, server_default="30"),
     Column("created_at", String),
     Column("updated_at", String),
 )

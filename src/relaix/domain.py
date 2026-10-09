@@ -57,6 +57,7 @@ class WebhookRule:
     active: bool
     action_url: str
     action_token: str | None
+    dispatch_timeout_seconds: int
     created_at: str
     updated_at: str
 

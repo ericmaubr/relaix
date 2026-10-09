@@ -87,6 +87,12 @@ cap on the source (`max_content_attempts`, `max_dispatch_attempts`):
    `webhook_rule_execution.attempts`. At the cap, the execution moves to
    `status = "abandoned"` and stops being retried.
 
+How long each dispatch waits for the destination to answer is set per rule
+(`dispatch_timeout_seconds`, default 30, up to 3600). A slow destination — a
+long-running batch job, say — needs a longer wait; with the default it would be
+cut off at 30 s, retried, and eventually abandoned while it is still working,
+and the retries would start the same work again in parallel.
+
 Without the dispatch cap, an event whose payload embeds a time-limited
 resource (a presigned download link, for example) would retry forever with
 zero chance of ever succeeding.

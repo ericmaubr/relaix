@@ -119,3 +119,21 @@ def test_create_event_and_polling_log():
     log = PollingLogRepository().create(source.id, success=True, new_events_found=1)
     assert log.success is True
     assert PollingLogRepository().list(source.id) == [log]
+
+
+def test_rule_dispatch_timeout_defaults_to_30_and_can_be_updated():
+    source = SourceRepository().create(name="Source", api_url="https://example.com")
+    repo = RuleRepository()
+    rule = repo.create(name="Rule", source_id=source.id, action_url="https://internal/a")
+    assert rule.dispatch_timeout_seconds == 30
+
+    updated = repo.update(rule.id, dispatch_timeout_seconds=600)
+    assert updated.dispatch_timeout_seconds == 600
+
+    custom = repo.create(
+        name="Custom",
+        source_id=source.id,
+        action_url="https://internal/b",
+        dispatch_timeout_seconds=120,
+    )
+    assert repo.get(custom.id).dispatch_timeout_seconds == 120

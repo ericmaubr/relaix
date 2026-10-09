@@ -284,3 +284,39 @@ def test_dispatch_pending_executions_abandons_at_source_dispatch_cap(monkeypatch
     execution = RuleExecutionRepository().list(event_id=event.id)[0]
     assert execution.status == "abandoned"
     assert execution.attempts == 2
+
+
+def test_dispatch_uses_the_dispatch_timeout_configured_on_the_rule(monkeypatch):
+    """A target slower than the default 30 s (e.g. a batch job) needs a longer wait,
+    or the dispatch is retried and abandoned while the target is still working."""
+    source = _make_source()
+    slow = RuleRepository().create(
+        name="Slow",
+        source_id=source.id,
+        action_url="https://internal/slow",
+        conditions=[{"field_path": "message.name", "operator": "=", "value": "x"}],
+        dispatch_timeout_seconds=600,
+    )
+    fast = _make_rule(
+        source.id, [{"field_path": "message.name", "operator": "=", "value": "x"}]
+    )
+    _make_event(source.id, {"message": {"name": "x"}})
+    evaluate_pending_events()
+
+    class FakeResponse:
+        ok = True
+        status_code = 200
+        text = "ok"
+
+    timeouts = {}
+
+    def fake_post(url, data=None, headers=None, timeout=None):
+        timeouts[url] = timeout
+        return FakeResponse()
+
+    monkeypatch.setattr("relaix.executor.requests.post", fake_post)
+
+    dispatch_pending_executions()
+
+    assert timeouts[slow.action_url] == 600
+    assert timeouts[fast.action_url] == 30  # default unchanged

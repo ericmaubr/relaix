@@ -151,7 +151,10 @@ def dispatch_pending_executions(batch_size: int = 50) -> dict:
                 _decode_payload(event.raw_payload, sources.get(event.source_id))
             )
             resp = requests.post(
-                rule.action_url, data=body, headers=headers, timeout=30
+                rule.action_url,
+                data=body,
+                headers=headers,
+                timeout=rule.dispatch_timeout_seconds,
             )
             status = "success" if resp.ok else "error"
             if status == "success":

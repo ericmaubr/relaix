@@ -79,11 +79,17 @@ def create_rule(
     action_url: str,
     action_token: str | None = None,
     conditions: list[dict] | None = None,
+    dispatch_timeout_seconds: int = 30,
 ):
     conditions = conditions or []
     _validate_conditions(conditions)
     return RuleRepository().create(
-        name, source_id, action_url, action_token, conditions
+        name,
+        source_id,
+        action_url,
+        action_token,
+        conditions,
+        dispatch_timeout_seconds,
     )
 
 

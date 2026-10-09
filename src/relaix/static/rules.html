@@ -132,6 +132,7 @@
       <div class="row" style="margin-top: 10px;">
         <label><span>Action URL (called on match)</span><input type="text" id="f-action-url" placeholder="https://internal/action" required></label>
         <label><span>Action token (Bearer, optional)</span><input type="text" id="f-action-token"></label>
+        <label><span>Dispatch timeout (seconds, 1-3600)</span><input type="number" id="f-dispatch-timeout" min="1" max="3600" value="30" required></label>
       </div>
 
       <div class="conditions-title">Conditions (all must match — AND)</div>
@@ -197,6 +198,7 @@
     { field: 'name', headerName: 'Name', width: 200 },
     { field: 'source_id', headerName: 'Source', width: 160, valueGetter: p => p.data ? sourceName(p.data.source_id) : '' },
     { field: 'action_url', headerName: 'Action URL', flex: 1, minWidth: 220 },
+    { field: 'dispatch_timeout_seconds', headerName: 'Timeout (s)', width: 110 },
     { field: 'active', headerName: 'Status', width: 100, cellRenderer: cellActive, valueGetter: p => p.data ? (p.data.active ? 'active' : 'inactive') : '' },
     { colId: 'conditions', headerName: 'Conditions', flex: 2, minWidth: 260, cellRenderer: cellConditions, sortable: false, filter: false, autoHeight: true, cellStyle: { padding: '4px 12px' } },
   ];
@@ -338,6 +340,7 @@
     document.getElementById('f-source-id').value = r.source_id;
     document.getElementById('f-action-url').value = r.action_url;
     document.getElementById('f-action-token').value = r.action_token || '';
+    document.getElementById('f-dispatch-timeout').value = r.dispatch_timeout_seconds;
     document.getElementById('conditions-list').innerHTML = '';
     (r.conditions.length ? r.conditions : [null]).forEach(c => addConditionRow(c || undefined));
     document.getElementById('form-panel').classList.remove('hidden');
@@ -365,6 +368,7 @@
           name: document.getElementById('f-name').value,
           action_url: document.getElementById('f-action-url').value,
           action_token: document.getElementById('f-action-token').value || null,
+          dispatch_timeout_seconds: parseInt(document.getElementById('f-dispatch-timeout').value, 10),
         });
         await api('PUT', 'rules/' + id + '/conditions', conditions);
       } else {
@@ -373,6 +377,7 @@
           source_id: document.getElementById('f-source-id').value,
           action_url: document.getElementById('f-action-url').value,
           action_token: document.getElementById('f-action-token').value || null,
+          dispatch_timeout_seconds: parseInt(document.getElementById('f-dispatch-timeout').value, 10),
           conditions,
         });
       }

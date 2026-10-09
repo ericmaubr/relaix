@@ -218,3 +218,28 @@ def test_auth_required_when_token_configured(client):
 
     resp = client.get("/sources", headers={"Authorization": "Bearer secret"})
     assert resp.status_code == 200
+
+
+def test_rule_dispatch_timeout_is_configurable_and_validated(client):
+    source = client.post(
+        "/sources", json={"name": "Source A", "api_url": "https://example.com"}
+    ).json()
+    base = {"name": "Rule A", "source_id": source["id"], "action_url": "https://internal/a"}
+
+    created = client.post("/rules", json=base).json()
+    assert created["dispatch_timeout_seconds"] == 30  # default
+
+    custom = client.post(
+        "/rules", json={**base, "dispatch_timeout_seconds": 600}
+    ).json()
+    assert custom["dispatch_timeout_seconds"] == 600
+
+    url = f"/rules/{created['id']}"
+    patched = client.patch(url, json={"dispatch_timeout_seconds": 900})
+    assert patched.status_code == 200
+    assert patched.json()["dispatch_timeout_seconds"] == 900
+
+    for invalid in (0, 3601):
+        body = {"dispatch_timeout_seconds": invalid}
+        assert client.post("/rules", json={**base, **body}).status_code == 422
+        assert client.patch(url, json=body).status_code == 422

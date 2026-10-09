@@ -98,6 +98,7 @@ class RuleRequest(BaseModel):
     source_id: str
     action_url: str
     action_token: str | None = None
+    dispatch_timeout_seconds: int = Field(30, ge=1, le=3600)
     conditions: list[ConditionRequest] = []
 
 
@@ -105,6 +106,7 @@ class RuleUpdateRequest(BaseModel):
     name: str | None = None
     action_url: str | None = None
     action_token: str | None = None
+    dispatch_timeout_seconds: int | None = Field(None, ge=1, le=3600)
     active: bool | None = None
 
 
@@ -226,6 +228,7 @@ def post_rule(req: RuleRequest):
             req.action_url,
             req.action_token,
             [c.model_dump() for c in req.conditions],
+            req.dispatch_timeout_seconds,
         )
     except api.InvalidConditionError as e:
         raise HTTPException(status_code=422, detail=str(e)) from e
