@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+from importlib.metadata import PackageNotFoundError, distribution
 from pathlib import Path
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Response
@@ -43,6 +44,23 @@ try:
     _versao = version("relaix")
 except Exception:
     _versao = "dev"
+
+
+def _read_commit() -> str | None:
+    """Commit the running code was installed from (``pip install git+...``).
+
+    Read from the installed distribution's ``direct_url.json``; ``None`` when
+    the package did not come from git or the metadata is missing/unreadable.
+    """
+    try:
+        raw = distribution("relaix").read_text("direct_url.json")
+        return json.loads(raw)["vcs_info"]["commit_id"] if raw else None
+    except (PackageNotFoundError, ValueError, KeyError, TypeError):  # silencio-ok: no commit is a normal state (not installed from git), /version reports null
+        return None
+
+
+_COMMIT = _read_commit()
+"""Read once at boot: proves what the *process* runs, not what is on disk now."""
 
 
 def set_api_token(token: str) -> None:
@@ -114,7 +132,7 @@ class RuleUpdateRequest(BaseModel):
 def get_version():
     from relaix.version import get_version as pkg_version
 
-    return {"version": pkg_version()}
+    return {"version": pkg_version(), "commit": _COMMIT, "dependencias": {}}
 
 
 @app.get("/status", include_in_schema=False)

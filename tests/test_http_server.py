@@ -22,7 +22,60 @@ def client():
 def test_version(client):
     resp = client.get("/version")
     assert resp.status_code == 200
-    assert "version" in resp.json()
+    corpo = resp.json()
+    assert "version" in corpo
+    assert "commit" in corpo
+    assert corpo["dependencias"] == {}
+
+
+def _distribuicao_com(monkeypatch, direct_url_json):
+    class _Dist:
+        def read_text(self, nome):
+            assert nome == "direct_url.json"
+            return direct_url_json
+
+    monkeypatch.setattr("relaix.http_server.distribution", lambda nome: _Dist())
+
+
+def test_read_commit_com_direct_url_do_git(monkeypatch):
+    from relaix.http_server import _read_commit
+
+    _distribuicao_com(
+        monkeypatch,
+        '{"url": "https://example.com/r.git", "vcs_info": {"vcs": "git", "commit_id": "abc123"}}',
+    )
+    assert _read_commit() == "abc123"
+
+
+@pytest.mark.parametrize(
+    "direct_url_json",
+    [None, "", "nao e json", '{"url": "file:///x"}', '{"vcs_info": {"vcs": "git"}}'],
+    ids=["sem arquivo", "vazio", "json invalido", "sem vcs_info", "sem commit_id"],
+)
+def test_read_commit_ausente_vira_none(monkeypatch, direct_url_json):
+    from relaix.http_server import _read_commit
+
+    _distribuicao_com(monkeypatch, direct_url_json)
+    assert _read_commit() is None
+
+
+def test_read_commit_sem_distribuicao_instalada_vira_none(monkeypatch):
+    from importlib.metadata import PackageNotFoundError
+
+    from relaix.http_server import _read_commit
+
+    def _levanta(nome):
+        raise PackageNotFoundError(nome)
+
+    monkeypatch.setattr("relaix.http_server.distribution", _levanta)
+    assert _read_commit() is None
+
+
+def test_version_devolve_o_commit_lido_na_subida(client, monkeypatch):
+    monkeypatch.setattr("relaix.http_server._COMMIT", "abc123")
+    assert client.get("/version").json()["commit"] == "abc123"
+    monkeypatch.setattr("relaix.http_server._COMMIT", None)
+    assert client.get("/version").json()["commit"] is None
 
 
 def test_status_sem_nenhum_loop_rodado_ainda(client, monkeypatch, tmp_path):
