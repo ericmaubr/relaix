@@ -10,7 +10,7 @@ from __future__ import annotations
 import json
 import time
 from collections.abc import Callable
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 
 import requests
 from sqlalchemy.exc import IntegrityError
@@ -110,10 +110,8 @@ def _due_for_polling(source: WebhookSource) -> bool:
     last = PollingLogRepository().list(source.id, limit=1)
     if not last:
         return True
-    executed_at = datetime.strptime(last[0].executed_at, "%Y-%m-%d %H:%M:%S").replace(
-        tzinfo=UTC
-    )
-    return datetime.now(UTC) - executed_at >= timedelta(
+    executed_at = datetime.strptime(last[0].executed_at, "%Y-%m-%d %H:%M:%S")  # conversao-ok: gravado por _now()
+    return datetime.now() - executed_at >= timedelta(
         seconds=source.polling_interval_seconds
     )
 

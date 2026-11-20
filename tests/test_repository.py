@@ -9,6 +9,15 @@ from relaix.repository import (
 )
 
 
+def test_now_is_local_time():
+    from datetime import datetime
+
+    from relaix.repository import _now
+
+    delta = datetime.now() - datetime.strptime(_now(), "%Y-%m-%d %H:%M:%S")
+    assert abs(delta.total_seconds()) < 5
+
+
 def test_create_and_get_source():
     repo = SourceRepository()
     source = repo.create(

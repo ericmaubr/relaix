@@ -157,7 +157,7 @@
 
   function isStale(updatedAt) {
     if (!updatedAt) return false;
-    const then = new Date(updatedAt.replace(' ', 'T') + 'Z');
+    const then = new Date(updatedAt.replace(' ', 'T'));
     return (Date.now() - then.getTime()) > STALE_MINUTES * 60 * 1000;
   }
 

@@ -4,7 +4,7 @@ webhook_polling_log, webhook_rule_execution."""
 from __future__ import annotations
 
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime
 
 from sqlalchemy import Engine, delete, insert, select, update
 
@@ -40,7 +40,7 @@ from relaix.domain import (
 
 
 def _now() -> str:
-    return datetime.now(UTC).strftime("%Y-%m-%d %H:%M:%S")
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
 
 def _new_id() -> str:
