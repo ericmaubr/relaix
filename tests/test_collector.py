@@ -140,6 +140,28 @@ def test_poll_all_active_sources_skips_inactive_and_not_due(monkeypatch):
     assert len(results) == 1
 
 
+def test_poll_all_active_sources_polls_source_whose_last_log_is_in_the_future(
+    monkeypatch,
+):
+    from datetime import datetime, timedelta
+
+    source = _make_source(name="Future log", polling_interval_seconds=3600)
+    future = (datetime.now() + timedelta(hours=3)).strftime("%Y-%m-%d %H:%M:%S")
+    monkeypatch.setattr("relaix.repository._now", lambda: future)
+    poll_source(source, fetch_fn=lambda s: [])
+    monkeypatch.undo()
+
+    calls = []
+    monkeypatch.setattr(
+        "relaix.collector._FETCHERS",
+        {"webhook_site": lambda s: calls.append(s.id) or []},
+    )
+
+    poll_all_active_sources()
+
+    assert calls == [source.id]
+
+
 def test_poll_all_active_sources_skips_source_not_yet_due(monkeypatch):
     source = _make_source(name="Not due yet", polling_interval_seconds=3600)
     poll_source(source, fetch_fn=lambda s: [])  # first cycle always due (no prior log)

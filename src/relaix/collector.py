@@ -111,6 +111,8 @@ def _due_for_polling(source: WebhookSource) -> bool:
     if not last:
         return True
     executed_at = datetime.strptime(last[0].executed_at, "%Y-%m-%d %H:%M:%S")  # conversao-ok: gravado por _now()
+    if executed_at > datetime.now():  # log gravado em UTC antes do deploy: fica a frente
+        return True
     return datetime.now() - executed_at >= timedelta(
         seconds=source.polling_interval_seconds
     )
