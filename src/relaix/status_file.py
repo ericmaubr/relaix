@@ -62,6 +62,7 @@ class StatusFile:
         if not self._path.exists():
             return None
         try:
-            return json.loads(self._path.read_text(encoding="utf-8"))
-        except (json.JSONDecodeError, OSError):  # silencio-ok: arquivo de status corrompido/ausente = sem status, por contrato
+            dados = json.loads(self._path.read_text(encoding="utf-8"))
+        except (ValueError, OSError):  # silencio-ok: arquivo de status corrompido/ausente = sem status, por contrato (ValueError cobre JSONDecodeError e UnicodeDecodeError)
             return None
+        return dados if isinstance(dados, dict) else None

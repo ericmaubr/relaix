@@ -90,6 +90,19 @@ def test_status_sem_nenhum_loop_rodado_ainda(client, monkeypatch, tmp_path):
     assert isinstance(corpo["versao"], str) and corpo["versao"]
 
 
+@pytest.mark.parametrize("conteudo", [b"[]", b"null", b'"x"', b'{"a": "\xc3'])
+def test_status_arquivo_ilegivel_nao_da_500(client, monkeypatch, tmp_path, conteudo):
+    from relaix import status_paths
+    for nome in ("CAMINHO_EXECUTE", "CAMINHO_COLLECT"):
+        caminho = tmp_path / f"{nome}.json"
+        caminho.write_bytes(conteudo)
+        monkeypatch.setattr(status_paths, nome, caminho)
+
+    resp = client.get("/status")
+    assert resp.status_code == 200
+    assert resp.json()["last_run_at"] is None
+
+
 def test_status_reporta_pior_dos_dois_loops(client, monkeypatch, tmp_path):
     from relaix.status_file import StatusFile
     from relaix import status_paths
